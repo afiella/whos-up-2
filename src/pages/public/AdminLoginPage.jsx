@@ -48,31 +48,33 @@ export default function AdminLoginPage() {
   `;
 
   const pill = css`
-    width: 100%;
-    border-radius: 1.5rem;
-    background-color: #eacdca;
-    height: 3rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-sizing: border-box;
-   
-  `;
+  width: 100%;
+  border-radius: 1.5rem;
+  background-color: #eacdca;
+  height: 3rem;
+  position: relative;
+  overflow: hidden;
+`;
 
-  const input = css`
-    flex: 1;
-    border: none;
-    background: transparent;
-    font-family: Poppins, sans-serif;
-    font-size: 1.125rem;
+const input = css`
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+  font-family: Poppins, sans-serif;
+  font-size: 1.125rem;
+  text-align: center;
+  outline: none;
+  padding: 0 20px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  
+  &::placeholder {
     text-align: center;
-    outline: none;
-    width: 90%;
-
-    &::placeholder {
-    text-align: center;
-    }
-  `;
+    color: #8b7355;
+  }
+`;
 
   const button = css`
     background-color: #d67b7b;
