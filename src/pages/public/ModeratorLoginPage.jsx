@@ -74,7 +74,7 @@ const input = css`
   &::placeholder {
     text-align: center;
     color: #8b7355;
-    line-height: 3rem;  // Also set it for placeholder
+    line-height: 3rem;
   }
 `;
 
