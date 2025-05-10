@@ -7,6 +7,7 @@ import { doc, onSnapshot, updateDoc, arrayUnion, arrayRemove, serverTimestamp, g
 import { useAuth } from '../../context/AuthContext';
 import ModeratorBadge from '../ui/ModeratorBadge';
 import QueueDisplay from './QueueDisplay';
+import ModeratorQueueControl from './ModeratorQueueControl';
 
 export default function RoomPage({ roomId, roomName }) {
   const location = useLocation();
@@ -155,6 +156,16 @@ export default function RoomPage({ roomId, roomName }) {
       outOfRotationPlayers: arrayRemove(playerName)
     });
   };
+
+  // Handle queue reordering (moderator only)
+const handleQueueReorder = async (newQueue) => {
+    if (!moderator) return; // Only moderators can reorder
+    
+    const roomRef = doc(db, 'rooms', roomId);
+    await updateDoc(roomRef, {
+      queue: newQueue
+    });
+  };
   
   // Styling
   const container = css`
@@ -265,6 +276,14 @@ export default function RoomPage({ roomId, roomName }) {
         background-color: #8a5d3b;
       }
     }
+
+      &.danger {
+    background-color: #b71c1c;
+    
+    &:hover {
+      background-color: #8e0000;
+    }
+  }
   `;
   
   if (loading) {
@@ -287,29 +306,40 @@ export default function RoomPage({ roomId, roomName }) {
       </div>
       
       {/* Action Buttons */}
-      <div className={buttonGroup}>
-        <button
-          className={button}
-          onClick={handleJoinQueue}
-          disabled={playerStatus === 'inQueue'}
-        >
-          Join Queue
-        </button>
-        <button
-          className={`${button} secondary`}
-          onClick={handleGoBusy}
-          disabled={playerStatus === 'busy'}
-        >
-          With Customer
-        </button>
-        <button
-          className={`${button} tertiary`}
-          onClick={handleOutOfRotation}
-          disabled={playerStatus === 'outOfRotation'}
-        >
-          Out of Rotation
-        </button>
-      </div>
+<div className={buttonGroup}>
+  <button
+    className={button}
+    onClick={handleJoinQueue}
+    disabled={playerStatus === 'inQueue'}
+  >
+    Join Queue
+  </button>
+  <button
+    className={`${button} secondary`}
+    onClick={handleGoBusy}
+    disabled={playerStatus === 'busy'}
+  >
+    With Customer
+  </button>
+  <button
+    className={`${button} tertiary`}
+    onClick={handleOutOfRotation}
+    disabled={playerStatus === 'outOfRotation'}
+  >
+    Out of Rotation
+  </button>
+  <button
+    className={`${button} danger`}
+    onClick={() => {
+      if (window.confirm('Are you sure you want to leave the game?')) {
+        handleLeaveGame();
+        navigate('/');
+      }
+    }}
+  >
+    Leave Game
+  </button>
+</div>
       
       {/* Queue Display */}
 <div className={card}>
@@ -320,6 +350,18 @@ export default function RoomPage({ roomId, roomName }) {
     isModerator={(name) => moderator && name === moderator.displayName}
   />
 </div>
+
+{/* Moderator Queue Control */}
+{moderator && queue.length > 0 && (
+  <div className={card}>
+    <ModeratorQueueControl
+      queue={queue}
+      currentPlayer={playerName}
+      isModerator={(name) => moderator && name === moderator.displayName}
+      onReorder={handleQueueReorder}
+    />
+  </div>
+)}
       
       {/* Busy Players Display */}
       <div className={card}>
