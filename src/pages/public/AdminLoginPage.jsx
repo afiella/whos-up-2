@@ -56,7 +56,7 @@ export default function AdminLoginPage() {
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
-    padding: 0 1rem;
+   
   `;
 
   const input = css`
@@ -67,7 +67,7 @@ export default function AdminLoginPage() {
     font-size: 1.125rem;
     text-align: center;
     outline: none;
-    width: 100%;
+    width: 90%;
 
     &::placeholder {
     text-align: center;
