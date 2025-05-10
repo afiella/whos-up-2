@@ -258,42 +258,45 @@ export function AuthProvider({ children }) {
         console.log('Admin login successful!');
         
         // Get admin data from Firestore
-        const adminDoc = await getDoc(doc(db, 'admin', 'admin'));
-        if (adminDoc.exists()) {
-          const adminData = adminDoc.data();
-          // Explicitly set the authenticated state
-          setIsAuthenticated(true);
-          setModerator({
-            email: adminEmail,
-            username: adminData.username || 'admin',
-            displayName: adminData.displayName || 'Admin',
-            isAdmin: true,
-            isModerator: true
-          });
-        } else {
-          // If admin doc doesn't exist, still set basic admin info
-          setIsAuthenticated(true);
-          setModerator({
-            email: adminEmail,
-            username: 'admin',
-            displayName: 'Admin',
-            isAdmin: true,
-            isModerator: true
-          });
-        }
-        
-        return true;
-      } catch (signInError) {
-        console.error('Admin sign-in error:', signInError);
-        return false;
+      const adminDoc = await getDoc(doc(db, 'admin', 'admin'));
+      let adminData = {
+        email: adminEmail,
+        username: 'admin',
+        displayName: 'Admin',
+        isAdmin: true,
+        isModerator: true
+      };
+      
+      if (adminDoc.exists()) {
+        const docData = adminDoc.data();
+        adminData = {
+          ...adminData,
+          username: docData.username || 'admin',
+          displayName: docData.displayName || 'Admin',
+        };
       }
-    } catch (error) {
-      console.error('Admin login error:', error);
+      
+      // Set state after successful login
+      setModerator(adminData);
+      setIsAuthenticated(true);
+      
+      // Small delay to ensure state updates properly
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      return true;
+    } catch (signInError) {
+      console.error('Admin sign-in error:', signInError);
+      setIsAuthenticated(false);
+      setModerator(null);
       return false;
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (error) {
+    console.error('Admin login error:', error);
+    return false;
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Logout function - MOVED OUTSIDE useEffect
   const logout = async () => {

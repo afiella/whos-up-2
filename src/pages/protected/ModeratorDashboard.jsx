@@ -5,7 +5,7 @@ import { css } from '@emotion/css';
 import { useAuth } from '../../context/AuthContext';
 
 export default function ModeratorDashboard() {
-  const { moderator, logout, registerModerator, fetchModerators } = useAuth();
+  const { moderator, logout, registerModerator, fetchModerators, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   
   // For adding new moderators (admin only)
@@ -17,21 +17,28 @@ export default function ModeratorDashboard() {
   
   // List of moderators (admin only)
   const [moderators, setModerators] = useState([]);
+  const [loadingModerators, setLoadingModerators] = useState(false);
 
   // Load moderators from Firebase (admin only)
   useEffect(() => {
     const loadModerators = async () => {
-      if (moderator?.isAdmin) {
-        const fetchedModerators = await fetchModerators();
-        setModerators(fetchedModerators);
+      if (moderator?.isAdmin && !authLoading) {
+        setLoadingModerators(true);
+        try {
+          const fetchedModerators = await fetchModerators();
+          setModerators(fetchedModerators);
+        } catch (error) {
+          console.error('Error loading moderators:', error);
+        } finally {
+          setLoadingModerators(false);
+        }
       }
     };
     
-    if (moderator?.isAdmin) {
-      loadModerators();
-    }
-  }, [moderator, fetchModerators]);
+    loadModerators();
+  }, [moderator, fetchModerators, authLoading]);
 
+  // Styling
   const container = css`
     min-height: 100vh;
     background-color: #fff8f0;
@@ -65,6 +72,11 @@ export default function ModeratorDashboard() {
     
     &:hover {
       background-color: #c56c6c;
+    }
+    
+    &:disabled {
+      background-color: #d3a7a7;
+      cursor: not-allowed;
     }
   `;
 
@@ -123,9 +135,56 @@ export default function ModeratorDashboard() {
     }
   `;
 
+  const moderatorsList = css`
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+  `;
+
+  const moderatorCard = css`
+    background-color: white;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid #eacdca;
+  `;
+
+  const moderatorName = css`
+    font-family: Poppins, sans-serif;
+    font-weight: 600;
+    color: #4b3b2b;
+    margin-bottom: 0.25rem;
+  `;
+
+  const moderatorInfo = css`
+    font-family: Poppins, sans-serif;
+    font-size: 0.875rem;
+    color: #6b6b6b;
+  `;
+
+  const loadingOverlay = css`
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 248, 240, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    font-family: Poppins, sans-serif;
+    font-size: 1.25rem;
+    color: #a47148;
+  `;
+
   const handleLogout = async () => {
-    await logout();
-    navigate('/');
+    try {
+      await logout();
+      navigate('/');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   const handleAddModerator = async (e) => {
@@ -137,40 +196,62 @@ export default function ModeratorDashboard() {
       return;
     }
     
-    // Create new moderator object using the same email for all moderators
-    const newModerator = {
-      username: newUsername,
-      password: newPassword,
-      displayName: newDisplayName,
-      email: 'ellabellosei@gmail.com', // Same email for all moderators
-      isModerator: true
-    };
-    
-    const result = await registerModerator(newModerator);
-    
-    if (result.success) {
-      setMessage('Moderator added successfully!');
-      setMessageType('success');
+    try {
+      // Create new moderator object
+      const newModerator = {
+        username: newUsername,
+        password: newPassword,
+        displayName: newDisplayName,
+        email: `${newUsername}@whosup.com`, // Generate a unique email
+        isModerator: true
+      };
       
-      // Clear form fields
-      setNewUsername('');
-      setNewPassword('');
-      setNewDisplayName('');
+      const result = await registerModerator(newModerator);
       
-      // Refresh the moderator list
-      const fetchedModerators = await fetchModerators();
-      setModerators(fetchedModerators);
-    } else {
-      setMessage(result.message);
+      if (result.success) {
+        setMessage('Moderator added successfully!');
+        setMessageType('success');
+        
+        // Clear form fields
+        setNewUsername('');
+        setNewPassword('');
+        setNewDisplayName('');
+        
+        // Refresh the moderator list
+        if (moderator?.isAdmin) {
+          const fetchedModerators = await fetchModerators();
+          setModerators(fetchedModerators);
+        }
+      } else {
+        setMessage(result.message);
+        setMessageType('error');
+      }
+    } catch (error) {
+      setMessage('Error adding moderator');
       setMessageType('error');
     }
   };
+
+  // Show loading state while auth is checking
+  if (authLoading) {
+    return (
+      <div className={loadingOverlay}>
+        Loading dashboard...
+      </div>
+    );
+  }
+
+  // If no moderator data, redirect to login
+  if (!moderator) {
+    navigate('/mod-login');
+    return null;
+  }
 
   return (
     <div className={container}>
       <div className={header}>
         <h1 className={title}>
-          {moderator?.isAdmin ? 'Admin Dashboard' : 'Moderator Dashboard'}
+          {moderator.isAdmin ? 'Admin Dashboard' : 'Moderator Dashboard'}
         </h1>
         <button className={button} onClick={handleLogout}>
           Logout
@@ -179,74 +260,102 @@ export default function ModeratorDashboard() {
       
       <div className={card}>
         <div className={cardTitle}>
-          Welcome, {moderator?.displayName || moderator?.username}!
+          Welcome, {moderator.displayName || moderator.username}!
         </div>
-        <p>
-          {moderator?.isAdmin 
+        <p style={{ fontFamily: 'Poppins, sans-serif', color: '#4b3b2b' }}>
+          {moderator.isAdmin 
             ? 'You are logged in as an admin. You can manage moderators and access all features.'
             : 'You are logged in as a moderator. You can join the game with a special badge.'}
         </p>
       </div>
       
       {/* Admin-only section to add new moderators */}
-      {moderator?.isAdmin && (
-        <div className={card}>
-          <div className={cardTitle}>Add New Moderator</div>
-          
-          <form className={form} onSubmit={handleAddModerator}>
-            <div className={formRow}>
-              <div className={formGroup}>
-                <label className={label}>Username</label>
-                <input
-                  type="text"
-                  className={input}
-                  value={newUsername}
-                  onChange={(e) => setNewUsername(e.target.value)}
-                  placeholder="Enter username"
-                />
+      {moderator.isAdmin && (
+        <>
+          <div className={card}>
+            <div className={cardTitle}>Add New Moderator</div>
+            
+            <form className={form} onSubmit={handleAddModerator}>
+              <div className={formRow}>
+                <div className={formGroup}>
+                  <label className={label}>Username</label>
+                  <input
+                    type="text"
+                    className={input}
+                    value={newUsername}
+                    onChange={(e) => setNewUsername(e.target.value)}
+                    placeholder="Enter username"
+                  />
+                </div>
+                
+                <div className={formGroup}>
+                  <label className={label}>Password</label>
+                  <input
+                    type="password"
+                    className={input}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter password"
+                  />
+                </div>
               </div>
               
               <div className={formGroup}>
-                <label className={label}>Password</label>
+                <label className={label}>Display Name</label>
                 <input
-                  type="password"
+                  type="text"
                   className={input}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Enter password"
+                  value={newDisplayName}
+                  onChange={(e) => setNewDisplayName(e.target.value)}
+                  placeholder="Enter display name"
                 />
               </div>
-            </div>
+              
+              <button type="submit" className={button}>
+                Add Moderator
+              </button>
+            </form>
             
-            <div className={formGroup}>
-              <label className={label}>Display Name</label>
-              <input
-                type="text"
-                className={input}
-                value={newDisplayName}
-                onChange={(e) => setNewDisplayName(e.target.value)}
-                placeholder="Enter display name"
-              />
-            </div>
-            
-            <button type="submit" className={button}>
-              Add Moderator
-            </button>
-          </form>
-          
-          {message && (
-            <div style={{
-              marginTop: '1rem',
-              padding: '0.75rem',
-              borderRadius: '0.5rem',
-              backgroundColor: messageType === 'success' ? '#e0f2e9' : '#f9e0e0',
-              color: messageType === 'success' ? '#2e7d32' : '#c62828',
-              fontFamily: 'Poppins, sans-serif'
-            }}>
-              {message}
-            </div>
-          )}
-        </div>
+            {message && (
+              <div style={{
+                marginTop: '1rem',
+                padding: '0.75rem',
+                borderRadius: '0.5rem',
+                backgroundColor: messageType === 'success' ? '#e0f2e9' : '#f9e0e0',
+                color: messageType === 'success' ? '#2e7d32' : '#c62828',
+                fontFamily: 'Poppins, sans-serif'
+              }}>
+                {message}
+              </div>
+            )}
+          </div>
+
+          {/* Moderators List */}
+          <div className={card}>
+            <div className={cardTitle}>Current Moderators</div>
+            {loadingModerators ? (
+              <p style={{ fontFamily: 'Poppins, sans-serif', color: '#6b6b6b' }}>
+                Loading moderators...
+              </p>
+            ) : moderators.length > 0 ? (
+              <div className={moderatorsList}>
+                {moderators.map((mod) => (
+                  <div key={mod.id} className={moderatorCard}>
+                    <div className={moderatorName}>{mod.displayName}</div>
+                    <div className={moderatorInfo}>Username: {mod.username}</div>
+                    <div className={moderatorInfo}>
+                      Role: {mod.isAdmin ? 'Admin' : 'Moderator'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ fontFamily: 'Poppins, sans-serif', color: '#6b6b6b' }}>
+                No moderators found.
+              </p>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
