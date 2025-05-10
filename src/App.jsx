@@ -12,6 +12,7 @@ import FiftyNinePage from './pages/rooms/FiftyNinePage';
 import AshlandPage from './pages/rooms/AshlandPage';
 import { AuthProvider } from './context/AuthContext';
 import { initializeRooms } from './firebase/initializeFirestore';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 
 export default function App() {
   // Initialize Firestore collections on app start
@@ -30,9 +31,22 @@ export default function App() {
           <Route path="/admin-login" element={<AdminLoginPage />} />
           
           {/* Protected routes */}
-          <Route path="/mod-dashboard" element={<ModeratorDashboard />} />
-          <Route path="/admin-dashboard" element={<AdminDashboard />} />
-          
+<Route 
+  path="/mod-dashboard" 
+  element={
+    <ProtectedRoute>
+      <ModeratorDashboard />
+    </ProtectedRoute>
+  } 
+/>
+<Route 
+  path="/admin-dashboard" 
+  element={
+    <ProtectedRoute adminOnly={true}>
+      <AdminDashboard />
+    </ProtectedRoute>
+  } 
+/>
           {/* Room routes */}
           <Route path="/bh" element={<BHPage />} />
           <Route path="/59" element={<FiftyNinePage />} />
