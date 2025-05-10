@@ -91,8 +91,8 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
             {index === 0 && <div className={positionBadge}>NEXT</div>}
             <div className={playerName}>{player}</div>
             {player === currentPlayer && <div className={youBadge}>YOU</div>}
-            {isAdmin(player) && <AdminBadge />}
-            {isModerator(player) && isModerator(player) && <ModeratorBadge />}
+            {isAdmin && typeof isAdmin === 'function' && isAdmin(player) && <AdminBadge />}
+            {isModerator && typeof isModerator === 'function' && isModerator(player) && <ModeratorBadge />}
           </div>
           {index < queue.length - 1 && <div className={arrow}>→</div>}
         </React.Fragment>
