@@ -1,5 +1,5 @@
 // src/pages/public/AdminLoginPage.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { css } from '@emotion/css';
 import { useAuth } from '../../context/AuthContext';
@@ -8,10 +8,17 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const { adminLogin } = useAuth();
+  const { adminLogin, isAuthenticated, moderator } = useAuth();
   const navigate = useNavigate();
 
-  // Styling is similar to ModeratorLoginPage for consistency
+  // If already authenticated as admin, redirect to dashboard
+  useEffect(() => {
+    if (isAuthenticated && moderator?.isAdmin) {
+      navigate('/admin-dashboard');
+    }
+  }, [isAuthenticated, moderator, navigate]);
+
+  // Styling
   const container = css`
     display: flex;
     align-items: center;
@@ -48,35 +55,35 @@ export default function AdminLoginPage() {
   `;
 
   const pill = css`
-  width: 100%;
-  border-radius: 1.5rem;
-  background-color: #eacdca;
-  height: 3rem;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`;
+    width: 100%;
+    border-radius: 1.5rem;
+    background-color: #eacdca;
+    height: 3rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  `;
 
-const input = css`
-  width: calc(100% - 40px);
-  height: 100%;
-  border: none;
-  background: transparent;
-  font-family: Poppins, sans-serif;
-  font-size: 1.125rem;
-  text-align: center;
-  outline: none;
-  padding: 0;
-  margin: 0;
-  line-height: 3rem;  // Match the height of the pill
-  
-  &::placeholder {
+  const input = css`
+    width: calc(100% - 40px);
+    height: 100%;
+    border: none;
+    background: transparent;
+    font-family: Poppins, sans-serif;
+    font-size: 1.125rem;
     text-align: center;
-    color: #8b7355;
+    outline: none;
+    padding: 0;
+    margin: 0;
     line-height: 3rem;
-  }
-`;
+    
+    &::placeholder {
+      text-align: center;
+      color: #8b7355;
+      line-height: 3rem;
+    }
+  `;
 
   const button = css`
     background-color: #d67b7b;
@@ -104,6 +111,7 @@ const input = css`
     font-family: Poppins, sans-serif;
     font-size: 0.875rem;
     margin-top: 0.5rem;
+    text-align: center;
   `;
 
   const link = css`
@@ -120,6 +128,7 @@ const input = css`
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    
     if (!password) {
       setError('Please enter admin password');
       return;
@@ -127,17 +136,20 @@ const input = css`
 
     try {
       setIsLoggingIn(true);
+      setError('');
+      
       const success = await adminLogin(password);
       
       if (success) {
-        // Navigate to the admin dashboard instead of moderator dashboard
-        navigate('/admin-dashboard');
+        // Don't navigate immediately - let useEffect handle it
+        console.log('Login successful, waiting for navigation...');
       } else {
         setError('Invalid admin password');
         setIsLoggingIn(false);
       }
     } catch (error) {
-      setError('Login failed: ' + error.message);
+      console.error('Login error:', error);
+      setError('Login failed. Please try again.');
       setIsLoggingIn(false);
     }
   };
@@ -156,6 +168,7 @@ const input = css`
               onChange={(e) => setPassword(e.target.value)}
               className={input}
               disabled={isLoggingIn}
+              autoFocus
             />
           </div>
           
