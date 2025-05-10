@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 export default function ProtectedRoute({ children, adminOnly = false }) {
   const { isAuthenticated, moderator, loading } = useAuth();
   
+  // Show loading while checking auth state
   if (loading) {
     return (
       <div style={{
@@ -14,20 +15,25 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
         alignItems: 'center',
         height: '100vh',
         backgroundColor: '#fff8f0',
-        fontFamily: 'Poppins, sans-serif'
+        fontFamily: 'Poppins, sans-serif',
+        fontSize: '1.25rem',
+        color: '#a47148'
       }}>
         Loading...
       </div>
     );
   }
   
-  if (!isAuthenticated) {
+  // Not authenticated at all
+  if (!isAuthenticated || !moderator) {
     return <Navigate to="/mod-login" />;
   }
   
-  if (adminOnly && !moderator?.isAdmin) {
+  // Route requires admin but user is not admin
+  if (adminOnly && !moderator.isAdmin) {
     return <Navigate to="/mod-dashboard" />;
   }
   
+  // All checks passed
   return children;
 }
