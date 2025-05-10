@@ -59,7 +59,7 @@ export default function AdminLoginPage() {
 `;
 
 const input = css`
-  width: calc(100% - 40px);  // Account for padding
+  width: calc(100% - 40px);
   height: 100%;
   border: none;
   background: transparent;
@@ -69,10 +69,12 @@ const input = css`
   outline: none;
   padding: 0;
   margin: 0;
+  line-height: 3rem;  // Match the height of the pill
   
   &::placeholder {
     text-align: center;
     color: #8b7355;
+    line-height: 3rem;  // Also set it for placeholder
   }
 `;
 
