@@ -47,7 +47,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   // Check for existing authentication on initial load
-useEffect(() => {
+  useEffect(() => {
     console.log("Checking authentication state...");
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -101,7 +101,7 @@ useEffect(() => {
                 setModerator(null);
               }
             }
-        } else {
+          } else {
             console.log("Admin document not found, checking moderators collection...");
             // Check if user is in the moderators collection
             const moderatorsRef = collection(db, 'moderators');
@@ -141,8 +141,13 @@ useEffect(() => {
       }
       setLoading(false);
     });
-    // LOGIN function
-const login = async (username, password) => {
+    
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, []); // This closes the useEffect
+
+  // LOGIN function - MOVED OUTSIDE useEffect
+  const login = async (username, password) => {
     try {
       setLoading(true);
       console.log('Attempting login with username:', username);
@@ -208,8 +213,6 @@ const login = async (username, password) => {
         console.log('Email not found for moderator');
         return false;
       }
-
-
       
       // Now sign in with email and password
       try {
@@ -238,8 +241,8 @@ const login = async (username, password) => {
     }
   };
     
-// Admin login with master password
-const adminLogin = async (password) => {
+  // Admin login with master password - MOVED OUTSIDE useEffect
+  const adminLogin = async (password) => {
     try {
       setLoading(true);
       
@@ -292,8 +295,8 @@ const adminLogin = async (password) => {
     }
   };
 
-  // Logout function
-const logout = async () => {
+  // Logout function - MOVED OUTSIDE useEffect
+  const logout = async () => {
     try {
       setLoading(true);
       console.log('Logging out...');
@@ -309,8 +312,8 @@ const logout = async () => {
     }
   };
 
-// Register a new moderator
-const registerModerator = async (newModerator) => {
+  // Register a new moderator - MOVED OUTSIDE useEffect
+  const registerModerator = async (newModerator) => {
     try {
       setLoading(true);
       console.log('Registering new moderator:', newModerator.username);
@@ -382,8 +385,8 @@ const registerModerator = async (newModerator) => {
     }
   };
 
-  // Function to fetch all moderators (admin only)
-const fetchModerators = async () => {
+  // Function to fetch all moderators (admin only) - MOVED OUTSIDE useEffect
+  const fetchModerators = async () => {
     try {
       setLoading(true);
       console.log('Fetching moderators...');
@@ -440,10 +443,6 @@ const fetchModerators = async () => {
       setLoading(false);
     }
   };
-
-    // Cleanup subscription on unmount
-    return () => unsubscribe();
-  }, []);
 
   return (
     <AuthContext.Provider value={{
