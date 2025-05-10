@@ -57,6 +57,7 @@ export default function LandingPage() {
     height: 3rem;
     display: flex;
     align-items: center;
+    justify-content: center;
     box-sizing: border-box;
     padding: 0 1rem;
   `;
@@ -70,6 +71,11 @@ export default function LandingPage() {
     font-size: 1.125rem;
     text-align: center;
     outline: none;
+    width: 100%%;
+
+    &::placeholder {
+    text-align: center;
+    }
   `;
 
   const accessLinks = css`
