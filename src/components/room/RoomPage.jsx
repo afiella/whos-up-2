@@ -6,6 +6,7 @@ import { db } from '../../firebase/config';
 import { doc, onSnapshot, updateDoc, arrayUnion, arrayRemove, serverTimestamp, getDoc } from 'firebase/firestore';
 import { useAuth } from '../../context/AuthContext';
 import ModeratorBadge from '../ui/ModeratorBadge';
+import QueueDisplay from './QueueDisplay';
 
 export default function RoomPage({ roomId, roomName }) {
   const location = useLocation();
@@ -311,25 +312,14 @@ export default function RoomPage({ roomId, roomName }) {
       </div>
       
       {/* Queue Display */}
-      <div className={card}>
-        <div className={cardTitle}>Current Queue</div>
-        {queue.length === 0 ? (
-          <p>No one in queue</p>
-        ) : (
-          <div className={playerList}>
-            {queue.map((player, index) => (
-              <div key={player} className={playerItem}>
-                <div>
-                  <span className="position">#{index + 1}</span>
-                  {player}
-                  {player === playerName && ' (You)'}
-                  {moderator && player === moderator.displayName && <ModeratorBadge />}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+<div className={card}>
+  <div className={cardTitle}>Current Queue</div>
+  <QueueDisplay 
+    queue={queue}
+    currentPlayer={playerName}
+    isModerator={(name) => moderator && name === moderator.displayName}
+  />
+</div>
       
       {/* Busy Players Display */}
       <div className={card}>
