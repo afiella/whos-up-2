@@ -53,11 +53,13 @@ export default function AdminLoginPage() {
   background-color: #eacdca;
   height: 3rem;
   position: relative;
-  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 `;
 
 const input = css`
-  width: 100%;
+  width: calc(100% - 40px);  // Account for padding
   height: 100%;
   border: none;
   background: transparent;
@@ -65,10 +67,8 @@ const input = css`
   font-size: 1.125rem;
   text-align: center;
   outline: none;
-  padding: 0 20px;
-  position: absolute;
-  top: 0;
-  left: 0;
+  padding: 0;
+  margin: 0;
   
   &::placeholder {
     text-align: center;
