@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { css } from '@emotion/css';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../firebase/config';
-import { collection, onSnapshot, doc } from 'firebase/firestore';
+import { updateDoc, onSnapshot, doc } from 'firebase/firestore';
 
 export default function AdminDashboard() {
   const { moderator, logout } = useAuth();
@@ -280,11 +280,22 @@ export default function AdminDashboard() {
     navigate('/');
   };
   
-  // Clear a specific room's queue
-  const clearRoomQueue = async (roomId) => {
+  // Replace the clearRoomQueue function in AdminDashboard.jsx with this:
+const clearRoomQueue = async (roomId) => {
     if (window.confirm(`Are you sure you want to clear the queue for ${getRoomDisplayName(roomId)}?`)) {
-      // Implementation would go here - you'd need to add this to your Firebase functions
-      console.log(`Clearing queue for ${roomId}`);
+      try {
+        const roomRef = doc(db, 'rooms', roomId);
+        await updateDoc(roomRef, {
+          queue: []
+        });
+        console.log(`Queue cleared for ${getRoomDisplayName(roomId)}`);
+        
+        // Optional: Show success message
+        alert(`Queue cleared successfully for ${getRoomDisplayName(roomId)}`);
+      } catch (error) {
+        console.error('Error clearing queue:', error);
+        alert('Failed to clear queue. Please try again.');
+      }
     }
   };
   
