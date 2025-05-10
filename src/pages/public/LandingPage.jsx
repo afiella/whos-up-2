@@ -71,10 +71,10 @@ export default function LandingPage() {
     font-size: 1.125rem;
     text-align: center;
     outline: none;
-    width: 100%%;
-
+    width: 100%;
+    
     &::placeholder {
-    text-align: center;
+      text-align: center;
     }
   `;
 
