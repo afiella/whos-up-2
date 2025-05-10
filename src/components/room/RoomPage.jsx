@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import ModeratorBadge from '../ui/ModeratorBadge';
 import QueueDisplay from './QueueDisplay';
 import ModeratorQueueControl from './ModeratorQueueControl';
+import AdminBadge from '../ui/AdminBadge';
 
 export default function RoomPage({ roomId, roomName }) {
   const location = useLocation();
@@ -166,6 +167,16 @@ const handleQueueReorder = async (newQueue) => {
       queue: newQueue
     });
   };
+
+  // Add this helper function inside the RoomPage component
+const isAdmin = (name) => {
+    return moderator?.isAdmin && name === moderator.displayName;
+  };
+  
+  const isModerator = (name) => {
+    return moderator && !moderator.isAdmin && name === moderator.displayName;
+  };
+
   
   // Styling
   const container = css`
@@ -348,6 +359,7 @@ const handleQueueReorder = async (newQueue) => {
     queue={queue}
     currentPlayer={playerName}
     isModerator={(name) => moderator && name === moderator.displayName}
+    isAdmin={isAdmin}
   />
 </div>
 
@@ -357,51 +369,40 @@ const handleQueueReorder = async (newQueue) => {
     <ModeratorQueueControl
       queue={queue}
       currentPlayer={playerName}
-      isModerator={(name) => moderator && name === moderator.displayName}
+      isModerator={isModerator}
+      isAdmin={isAdmin}
       onReorder={handleQueueReorder}
     />
   </div>
 )}
       
-      {/* Busy Players Display */}
-      <div className={card}>
-        <div className={cardTitle}>With Customers</div>
-        {busyPlayers.length === 0 ? (
-          <p>No one with customers</p>
-        ) : (
-          <div className={playerList}>
-            {busyPlayers.map((player) => (
-              <div key={player} className={playerItem}>
-                <div>
-                  {player}
-                  {player === playerName && ' (You)'}
-                  {moderator && player === moderator.displayName && <ModeratorBadge />}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+      {/* Update the Busy Players Display */}
+<div className={playerList}>
+  {busyPlayers.map((player) => (
+    <div key={player} className={playerItem}>
+      <div>
+        {player}
+        {player === playerName && ' (You)'}
+        {isAdmin(player) && <AdminBadge />}
+        {isModerator(player) && <ModeratorBadge />}
       </div>
+    </div>
+  ))}
+</div>
       
-      {/* Out of Rotation Display */}
-      <div className={card}>
-        <div className={cardTitle}>Out of Rotation</div>
-        {outOfRotationPlayers.length === 0 ? (
-          <p>No one out of rotation</p>
-        ) : (
-          <div className={playerList}>
-            {outOfRotationPlayers.map((player) => (
-              <div key={player} className={playerItem}>
-                <div>
-                  {player}
-                  {player === playerName && ' (You)'}
-                  {moderator && player === moderator.displayName && <ModeratorBadge />}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+      {/* Update the Out of Rotation Display */}
+<div className={playerList}>
+  {outOfRotationPlayers.map((player) => (
+    <div key={player} className={playerItem}>
+      <div>
+        {player}
+        {player === playerName && ' (You)'}
+        {isAdmin(player) && <AdminBadge />}
+        {isModerator(player) && <ModeratorBadge />}
       </div>
+    </div>
+  ))}
+</div>
     </div>
   );
 }

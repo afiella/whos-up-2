@@ -18,8 +18,9 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import ModeratorBadge from '../ui/ModeratorBadge';
+import AdminBadge from '../ui/AdminBadge';
 
-function SortableItem({ id, player, currentPlayer, isModerator, index }) {
+function SortableItem({ id, player, currentPlayer, isModerator, isAdmin, index }) {
   const {
     attributes,
     listeners,
@@ -78,14 +79,15 @@ function SortableItem({ id, player, currentPlayer, isModerator, index }) {
         <span className="position">#{index + 1}</span>
         {player}
         {player === currentPlayer && <span className="you-badge">(You)</span>}
-        {isModerator(player) && <ModeratorBadge />}
+        {isAdmin && isAdmin(player) && <AdminBadge />}
+        {isModerator && isModerator(player) && <ModeratorBadge />}
       </div>
       <div className="drag-handle">⋮⋮</div>
     </div>
   );
 }
 
-export default function ModeratorQueueControl({ queue, currentPlayer, isModerator, onReorder }) {
+export default function ModeratorQueueControl({ queue, currentPlayer, isModerator, isAdmin, onReorder }) {
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -142,6 +144,7 @@ export default function ModeratorQueueControl({ queue, currentPlayer, isModerato
               player={player}
               currentPlayer={currentPlayer}
               isModerator={isModerator}
+              isAdmin={isAdmin}
               index={index}
             />
           ))}

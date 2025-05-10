@@ -2,6 +2,7 @@
 import React from 'react';
 import { css } from '@emotion/css';
 import ModeratorBadge from '../ui/ModeratorBadge';
+import AdminBadge from '../ui/AdminBadge';
 
 export default function QueueDisplay({ queue, currentPlayer, isModerator }) {
   const container = css`
@@ -90,6 +91,7 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator }) {
             {index === 0 && <div className={positionBadge}>NEXT</div>}
             <div className={playerName}>{player}</div>
             {player === currentPlayer && <div className={youBadge}>YOU</div>}
+            {isAdmin(player) && <AdminBadge />}
             {isModerator(player) && <ModeratorBadge />}
           </div>
           {index < queue.length - 1 && <div className={arrow}>→</div>}

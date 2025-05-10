@@ -121,28 +121,15 @@ export default function LandingPage() {
           />
         </div>
         
-        {/* Dashboard link if already logged in as moderator */}
-        {moderator && (
-          <div
-            className={accessLink}
-            onClick={() => nav('/mod-dashboard')}
-            style={{ marginTop: '0.5rem' }}
-          >
-            Go to Moderator Dashboard
-          </div>
-        )}
-        
         {/* Access links for admin/moderator */}
-        {!moderator && (
-          <div className={accessLinks}>
-            <div className={accessLink} onClick={() => nav('/mod-login')}>
-              Moderator Access
-            </div>
-            <div className={accessLink} onClick={() => nav('/admin-login')}>
-              Admin Access
-            </div>
+        <div className={accessLinks}>
+          <div className={accessLink} onClick={() => nav('/mod-login')}>
+            Moderator Access
           </div>
-        )}
+          <div className={accessLink} onClick={() => nav('/admin-login')}>
+            Admin Access
+          </div>
+        </div>
       </div>
     </div>
   );
