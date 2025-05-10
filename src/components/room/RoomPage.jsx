@@ -356,11 +356,11 @@ const isAdmin = (name) => {
 <div className={card}>
   <div className={cardTitle}>Current Queue</div>
   <QueueDisplay 
-    queue={queue}
-    currentPlayer={playerName}
-    isModerator={(name) => moderator && name === moderator.displayName}
-    isAdmin={isAdmin}
-  />
+  queue={queue}
+  currentPlayer={playerName}
+  isModerator={isModerator}
+  isAdmin={isAdmin}
+/>
 </div>
 
 {/* Moderator Queue Control */}

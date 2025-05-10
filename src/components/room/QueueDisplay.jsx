@@ -4,7 +4,7 @@ import { css } from '@emotion/css';
 import ModeratorBadge from '../ui/ModeratorBadge';
 import AdminBadge from '../ui/AdminBadge';
 
-export default function QueueDisplay({ queue, currentPlayer, isModerator }) {
+export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmin }) {
   const container = css`
     display: flex;
     align-items: center;
