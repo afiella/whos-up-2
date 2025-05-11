@@ -65,16 +65,18 @@ export default function AdminDashboard() {
     };
   }, []);
   
-  // Load all moderators
   useEffect(() => {
     const loadModerators = async () => {
       if (moderator?.isAdmin) {
-        const moderatorsList = await fetchModerators();
-        setAllModerators(moderatorsList);
+        const fetchedModerators = await fetchModerators();
+        setModerators(fetchedModerators);
       }
     };
-    loadModerators();
-  }, [moderator, fetchModerators]);
+    
+    if (moderator?.isAdmin) {
+      loadModerators();
+    }
+  }, [moderator?.isAdmin]); // <- Only re-run if admin status changes
   
   // Styles
   const container = css`
