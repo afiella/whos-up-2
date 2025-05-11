@@ -1,43 +1,21 @@
 // src/components/auth/ProtectedRoute.jsx
 import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 export default function ProtectedRoute({ children, adminOnly = false }) {
-  const { isAuthenticated, moderator, loading } = useAuth();
-  const location = useLocation();
+  const { isAuthenticated, moderator } = useAuth();
   
-  // Show loading while checking auth state
-  if (loading) {
-    return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        backgroundColor: '#fff8f0',
-        fontFamily: 'Poppins, sans-serif',
-        fontSize: '1.25rem',
-        color: '#a47148'
-      }}>
-        Loading...
-      </div>
-    );
+  // Not logged in at all
+  if (!isAuthenticated) {
+    return <Navigate to="/mod-login" replace />;
   }
   
-  // Not authenticated at all - redirect to appropriate login
-  if (!isAuthenticated || !moderator) {
-    if (adminOnly) {
-      return <Navigate to="/admin-login" state={{ from: location }} replace />;
-    }
-    return <Navigate to="/mod-login" state={{ from: location }} replace />;
-  }
-  
-  // Check admin access for admin-only routes
-  if (adminOnly && !moderator.isAdmin) {
+  // Admin-only route but user is not admin
+  if (adminOnly && !moderator?.isAdmin) {
     return <Navigate to="/mod-dashboard" replace />;
   }
   
-  // User is authenticated and has proper permissions
+  // User has proper access
   return children;
 }

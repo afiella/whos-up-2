@@ -65,16 +65,14 @@ export default function AdminDashboard() {
     };
   }, []);
   
-  // Load all moderators
-useEffect(() => {
-  const loadModerators = async () => {
-    if (moderator?.isAdmin) {
+  // Load all moderators - only once when component mounts
+  useEffect(() => {
+    const loadModerators = async () => {
       const moderatorsList = await fetchModerators();
-      setAllModerators(moderatorsList); // Changed from setModerators to setAllModerators
-    }
-  };
-  loadModerators();
-}, [moderator?.isAdmin]); // Only re-run if admin status changes
+      setAllModerators(moderatorsList);
+    };
+    loadModerators();
+  }, []); // Empty dependency array - only run once
   
   // Styles
   const container = css`
@@ -175,10 +173,6 @@ useEffect(() => {
     margin-top: 1rem;
   `;
   
-  const playerSection = css`
-    margin-bottom: 1rem;
-  `;
-  
   const sectionTitle = css`
     font-family: Poppins, sans-serif;
     font-weight: 600;
@@ -212,48 +206,6 @@ useEffect(() => {
     text-align: center;
   `;
   
-  const detailView = css`
-    background-color: white;
-    border-radius: 1rem;
-    padding: 2rem;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-  `;
-  
-  const detailHeader = css`
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-  `;
-  
-  const detailTitle = css`
-    font-family: 'Lilita One', cursive;
-    font-size: 2rem;
-    color: #a47148;
-  `;
-  
-  const buttonGroup = css`
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-  `;
-  
-  const secondaryButton = css`
-    background-color: #8d9e78;
-    color: white;
-    border: none;
-    border-radius: 1.5rem;
-    padding: 0.5rem 1.25rem;
-    font-family: Poppins, sans-serif;
-    font-size: 0.875rem;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    
-    &:hover {
-      background-color: #768a62;
-    }
-  `;
-  
   const emptyState = css`
     text-align: center;
     color: #6b6b6b;
@@ -285,95 +237,26 @@ useEffect(() => {
     }
   `;
   
-  // New styles for moderator management
-  const moderatorSection = css`
-    background-color: white;
-    border-radius: 1rem;
-    padding: 2rem;
-    margin-bottom: 2rem;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-  `;
-  
-  const form = css`
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    margin-bottom: 1rem;
-  `;
-  
-  const formGroup = css`
+  const buttonGroup = css`
     display: flex;
-    flex-direction: column;
-  `;
-  
-  const label = css`
-    font-family: Poppins, sans-serif;
-    font-size: 0.875rem;
-    color: #4b3b2b;
-    margin-bottom: 0.25rem;
-  `;
-  
-  const input = css`
-    padding: 0.5rem;
-    border: 1px solid #eacdca;
-    border-radius: 0.5rem;
-    font-family: Poppins, sans-serif;
-    font-size: 1rem;
-    
-    &:focus {
-      outline: none;
-      border-color: #d67b7b;
-    }
-  `;
-  
-  const select = css`
-    padding: 0.5rem;
-    border: 1px solid #eacdca;
-    border-radius: 0.5rem;
-    font-family: Poppins, sans-serif;
-    font-size: 1rem;
-    background-color: white;
-    cursor: pointer;
-    
-    &:focus {
-      outline: none;
-      border-color: #d67b7b;
-    }
-  `;
-  
-  const moderatorList = css`
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 1rem;
-    margin-top: 1rem;
+    flex-wrap: wrap;
   `;
   
-  const moderatorCard = css`
-    background-color: #f6dfdf;
-    padding: 1rem;
-    border-radius: 0.5rem;
-    font-family: Poppins, sans-serif;
-  `;
-  
-  const moderatorName = css`
-    font-weight: 600;
-    color: #4b3b2b;
-    margin-bottom: 0.25rem;
-  `;
-  
-  const moderatorInfo = css`
-    font-size: 0.875rem;
-    color: #6b6b6b;
-  `;
-  
-  const badge = css`
-    display: inline-block;
-    background-color: #d67b7b;
+  const secondaryButton = css`
+    background-color: #8d9e78;
     color: white;
-    padding: 0.25rem 0.5rem;
-    border-radius: 1rem;
-    font-size: 0.75rem;
-    margin-top: 0.5rem;
+    border: none;
+    border-radius: 1.5rem;
+    padding: 0.5rem 1.25rem;
+    font-family: Poppins, sans-serif;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    
+    &:hover {
+      background-color: #768a62;
+    }
   `;
   
   // Helper function to get room display name
@@ -386,9 +269,9 @@ useEffect(() => {
     }
   };
   
-  const handleLogout = async () => {
-    await logout();
-    navigate('/', { replace: true });
+  const handleLogout = () => {
+    logout();
+    navigate('/');
   };
   
   // Clear a specific room's queue
@@ -399,10 +282,8 @@ useEffect(() => {
         await updateDoc(roomRef, {
           queue: []
         });
-        console.log(`Queue cleared for ${getRoomDisplayName(roomId)}`);
       } catch (error) {
         console.error('Error clearing queue:', error);
-        alert('Failed to clear queue. Please try again.');
       }
     }
   };
@@ -418,58 +299,10 @@ useEffect(() => {
     });
   };
   
-  // Handle moderator form submission
-  const handleAddModerator = async (e) => {
-    e.preventDefault();
-    
-    if (!newModeratorData.username || !newModeratorData.password || 
-        !newModeratorData.displayName || !newModeratorData.assignedRoom) {
-      setModeratorMessage('All fields are required');
-      setModeratorMessageType('error');
-      return;
-    }
-    
-    try {
-      // Generate a unique email for each moderator
-      const uniqueEmail = `${newModeratorData.username}@whosup-${newModeratorData.assignedRoom}.com`;
-      
-      const result = await registerModerator({
-        ...newModeratorData,
-        email: uniqueEmail,
-        isModerator: true
-      });
-      
-      if (result.success) {
-        setModeratorMessage(`${newModeratorData.displayName} added as ${getRoomDisplayName(newModeratorData.assignedRoom)} moderator!`);
-        setModeratorMessageType('success');
-        
-        // Reset form
-        setNewModeratorData({
-          username: '',
-          password: '',
-          displayName: '',
-          assignedRoom: 'bh'
-        });
-        
-        // Refresh moderator list
-        const updatedModerators = await fetchModerators();
-        setAllModerators(updatedModerators);
-      } else {
-        setModeratorMessage(result.message);
-        setModeratorMessageType('error');
-      }
-    } catch (error) {
-      setModeratorMessage('Error adding moderator');
-      setModeratorMessageType('error');
-    }
-  };
-  
   if (loading) {
     return (
       <div className={container}>
-        <div style={{ textAlign: 'center', padding: '2rem' }}>
-          Loading dashboard...
-        </div>
+        <div>Loading dashboard...</div>
       </div>
     );
   }
@@ -479,134 +312,11 @@ useEffect(() => {
       <div className={header}>
         <h1 className={title}>Admin Command Center</h1>
         <div className={buttonGroup}>
-          <button 
-            className={secondaryButton} 
-            onClick={() => setShowModeratorForm(!showModeratorForm)}
-          >
-            {showModeratorForm ? 'Hide Moderator Form' : 'Add Moderator'}
-          </button>
-          <button className={secondaryButton} onClick={() => navigate('/mod-dashboard')}>
-            Moderator View
-          </button>
           <button className={button} onClick={handleLogout}>
             Logout
           </button>
         </div>
       </div>
-      
-      {/* Moderator Management Section */}
-      {showModeratorForm && (
-        <div className={moderatorSection}>
-          <h2 className={sectionTitle} style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>
-            Manage Room Moderators
-          </h2>
-          
-          <form className={form} onSubmit={handleAddModerator}>
-            <div className={formGroup}>
-              <label className={label}>Username</label>
-              <input
-                type="text"
-                className={input}
-                value={newModeratorData.username}
-                onChange={(e) => setNewModeratorData(prev => ({
-                  ...prev,
-                  username: e.target.value
-                }))}
-                placeholder="Enter username"
-              />
-            </div>
-            
-            <div className={formGroup}>
-              <label className={label}>Password</label>
-              <input
-                type="password"
-                className={input}
-                value={newModeratorData.password}
-                onChange={(e) => setNewModeratorData(prev => ({
-                  ...prev,
-                  password: e.target.value
-                }))}
-                placeholder="Enter password"
-              />
-            </div>
-            
-            <div className={formGroup}>
-              <label className={label}>Display Name</label>
-              <input
-                type="text"
-                className={input}
-                value={newModeratorData.displayName}
-                onChange={(e) => setNewModeratorData(prev => ({
-                  ...prev,
-                  displayName: e.target.value
-                }))}
-                placeholder="Enter display name"
-              />
-            </div>
-            
-            <div className={formGroup}>
-              <label className={label}>Assigned Room</label>
-              <select
-                className={select}
-                value={newModeratorData.assignedRoom}
-                onChange={(e) => setNewModeratorData(prev => ({
-                  ...prev,
-                  assignedRoom: e.target.value
-                }))}
-              >
-                <option value="bh">BH Room</option>
-                <option value="59">59 Room</option>
-                <option value="ashland">Ashland Room</option>
-              </select>
-            </div>
-            
-            <button 
-              type="submit" 
-              className={button} 
-              style={{ gridColumn: 'span 4', marginTop: '1rem' }}
-            >
-              Add Room Moderator
-            </button>
-          </form>
-          
-          {moderatorMessage && (
-            <div style={{
-              marginTop: '1rem',
-              padding: '0.75rem',
-              borderRadius: '0.5rem',
-              backgroundColor: moderatorMessageType === 'success' ? '#e0f2e9' : '#f9e0e0',
-              color: moderatorMessageType === 'success' ? '#2e7d32' : '#c62828',
-              fontFamily: 'Poppins, sans-serif'
-            }}>
-              {moderatorMessage}
-            </div>
-          )}
-          
-          <h3 style={{ 
-            marginTop: '2rem', 
-            marginBottom: '1rem', 
-            fontFamily: 'Poppins, sans-serif',
-            color: '#4b3b2b' 
-          }}>
-            Current Moderators by Room
-          </h3>
-          
-          <div className={moderatorList}>
-            {allModerators.map((mod) => (
-              <div key={mod.id} className={moderatorCard}>
-                <div className={moderatorName}>{mod.displayName}</div>
-                <div className={moderatorInfo}>Username: {mod.username}</div>
-                <div className={moderatorInfo}>Role: {mod.isAdmin ? 'Admin' : 'Moderator'}</div>
-                {mod.assignedRoom && (
-                  <div className={badge}>
-                    {getRoomDisplayName(mod.assignedRoom)}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
       
       {/* Overview Grid - All Rooms */}
       <div className={overviewGrid}>
@@ -675,61 +385,6 @@ useEffect(() => {
             </div>
           </div>
         ))}
-      </div>
-      
-      {/* Detailed View for Selected Room */}
-      <div className={detailView}>
-        <div className={detailHeader}>
-          <div className={detailTitle}>
-            {getRoomDisplayName(activeRoom)} - Detailed View
-          </div>
-          <button 
-            className={button}
-            onClick={() => navigateToRoom(activeRoom)}
-          >
-            Enter This Room
-          </button>
-        </div>
-        
-        <div className={playerSection}>
-          <div className={sectionTitle}>Queue ({roomsData[activeRoom].queue.length})</div>
-          {roomsData[activeRoom].queue.length > 0 ? (
-            roomsData[activeRoom].queue.map((player, index) => (
-              <div key={player} className={playerItem}>
-                <span className={queuePosition}>{index + 1}</span>
-                {player}
-              </div>
-            ))
-          ) : (
-            <div className={emptyState}>Queue is empty</div>
-          )}
-        </div>
-        
-        <div className={playerSection}>
-          <div className={sectionTitle}>Busy with Customer ({roomsData[activeRoom].busyPlayers.length})</div>
-          {roomsData[activeRoom].busyPlayers.length > 0 ? (
-            roomsData[activeRoom].busyPlayers.map((player) => (
-              <div key={player} className={playerItem}>
-                🟡 {player}
-              </div>
-            ))
-          ) : (
-            <div className={emptyState}>No one is busy</div>
-          )}
-        </div>
-        
-        <div className={playerSection}>
-          <div className={sectionTitle}>Out of Rotation ({roomsData[activeRoom].outOfRotationPlayers.length})</div>
-          {roomsData[activeRoom].outOfRotationPlayers.length > 0 ? (
-            roomsData[activeRoom].outOfRotationPlayers.map((player) => (
-              <div key={player} className={playerItem}>
-                ⭕ {player}
-              </div>
-            ))
-          ) : (
-            <div className={emptyState}>No one out of rotation</div>
-          )}
-        </div>
       </div>
     </div>
   );

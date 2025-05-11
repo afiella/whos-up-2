@@ -1,5 +1,5 @@
 // src/pages/public/AdminLoginPage.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { css } from '@emotion/css';
 import { useAuth } from '../../context/AuthContext';
@@ -7,33 +7,8 @@ import { useAuth } from '../../context/AuthContext';
 export default function AdminLoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const { adminLogin, isAuthenticated, moderator, loading } = useAuth();
+  const { adminLogin } = useAuth();
   const navigate = useNavigate();
-
-  // Debug auth state
-  useEffect(() => {
-    console.log('AdminLoginPage - Auth State:', {
-      isAuthenticated,
-      moderator,
-      loading,
-      isAdmin: moderator?.isAdmin
-    });
-  }, [isAuthenticated, moderator, loading]);
-
- // Redirect if already logged in as admin
-useEffect(() => {
-    console.log('AdminLoginPage - Auth state:', {
-      isAuthenticated,
-      moderator,
-      isAdmin: moderator?.isAdmin
-    });
-    
-    if (isAuthenticated && moderator?.isAdmin) {
-      console.log('Should redirect to dashboard...');
-      navigate('/admin-dashboard', { replace: true });
-    }
-  }, [isAuthenticated, moderator, navigate]);
 
   const container = css`
     display: flex;
@@ -115,11 +90,6 @@ useEffect(() => {
     &:hover {
       background-color: #c56c6c;
     }
-    
-    &:disabled {
-      background-color: #d3a7a7;
-      cursor: not-allowed;
-    }
   `;
 
   const errorText = css`
@@ -141,63 +111,22 @@ useEffect(() => {
     }
   `;
 
-  const note = css`
-    color: #8b7355;
-    font-family: Poppins, sans-serif;
-    font-size: 0.875rem;
-    text-align: center;
-    font-style: italic;
-    margin-top: 0.5rem;
-  `;
-
-  const loadingDiv = css`
-    text-align: center;
-    color: #a47148;
-    font-family: Poppins, sans-serif;
-    font-size: 1.125rem;
-  `;
-
-  const handleLogin = async (e) => {
+  const handleLogin = (e) => {
     e.preventDefault();
-    setError('');
     
     if (!password) {
       setError('Please enter password');
       return;
     }
 
-    try {
-      setIsLoggingIn(true);
-      console.log('AdminLoginPage - Starting login attempt...');
-      
-      // Use adminLogin with just the password
-      const success = await adminLogin(password);
-      console.log('AdminLoginPage - Login result:', success);
-      
-      if (success) {
-        console.log('AdminLoginPage - Login successful, waiting for auth state update...');
-        // The useEffect above will handle navigation
-      } else {
-        console.log('AdminLoginPage - Login failed');
-        setError('Invalid password');
-        setIsLoggingIn(false);
-      }
-    } catch (error) {
-      console.error('AdminLoginPage - Login error:', error);
-      setError('Login failed: ' + error.message);
-      setIsLoggingIn(false);
+    const success = adminLogin(password);
+    
+    if (success) {
+      navigate('/admin-dashboard');
+    } else {
+      setError('Invalid password');
     }
   };
-
-  // Show loading state if auth is still initializing
-  if (loading && !isLoggingIn) {
-    console.log('AdminLoginPage - Showing auth loading state');
-    return (
-      <div className={container}>
-        <div className={loadingDiv}>Checking authentication...</div>
-      </div>
-    );
-  }
 
   return (
     <div className={container}>
@@ -212,29 +141,17 @@ useEffect(() => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className={input}
-              disabled={isLoggingIn}
               autoFocus
             />
           </div>
           
           {error && <div className={errorText}>{error}</div>}
           
-          <button
-            type="submit"
-            className={button}
-            disabled={isLoggingIn}
-          >
-            {isLoggingIn ? 'Logging in...' : 'Login'}
+          <button type="submit" className={button}>
+            Login
           </button>
-          
-          <div className={note}>
-            Admin login - Password only required
-          </div>
         </form>
         
-        <div className={link} onClick={() => navigate('/mod-login')}>
-          Moderator Login
-        </div>
         <div className={link} onClick={() => navigate('/')}>
           Back to Home
         </div>
