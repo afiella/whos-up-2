@@ -1,23 +1,11 @@
 // src/pages/public/LandingPage.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { css } from '@emotion/css';
-import { useAuth } from '../../context/AuthContext';
 
 export default function LandingPage() {
   const [name, setName] = useState('');
   const nav = useNavigate();
-  const { moderator, logout, isAuthenticated } = useAuth();
-  
-  // Logout when landing page loads for fresh start
-  useEffect(() => {
-    const ensureFreshStart = async () => {
-      if (isAuthenticated) {
-        await logout();
-      }
-    };
-    ensureFreshStart();
-  }, []);
   
   // flex container
   const container = css`

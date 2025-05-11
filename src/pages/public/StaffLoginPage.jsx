@@ -9,18 +9,19 @@ export default function StaffLoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const { login, logout, isAuthenticated, moderator } = useAuth();
+  const { login, isAuthenticated, moderator, loading } = useAuth();
   const navigate = useNavigate();
 
-  // Always logout when landing on this page for a fresh start
+  // Redirect if already authenticated
   useEffect(() => {
-    const ensureFreshStart = async () => {
-      if (isAuthenticated) {
-        await logout();
+    if (!loading && isAuthenticated && moderator) {
+      if (moderator.isAdmin) {
+        navigate('/admin-dashboard', { replace: true });
+      } else {
+        navigate('/mod-dashboard', { replace: true });
       }
-    };
-    ensureFreshStart();
-  }, []); // Only run once when component mounts
+    }
+  }, [isAuthenticated, moderator, loading, navigate]);
 
   const container = css`
     display: flex;
@@ -148,28 +149,29 @@ export default function StaffLoginPage() {
 
     try {
       setIsLoggingIn(true);
-      console.log('Attempting login with username:', username);
-      
       const success = await login(username, password);
       
       if (success) {
-        console.log('Login successful');
-        // Navigate based on user role
-        if (moderator?.isAdmin) {
-          navigate('/admin-dashboard', { replace: true });
-        } else {
-          navigate('/mod-dashboard', { replace: true });
-        }
+        // Navigation will be handled by the useEffect above
       } else {
         setError('Invalid username or password');
-        setIsLoggingIn(false);
       }
     } catch (error) {
       console.error('Login error:', error);
       setError('Login failed: ' + error.message);
+    } finally {
       setIsLoggingIn(false);
     }
   };
+
+  // Show loading state while checking auth
+  if (loading) {
+    return (
+      <div className={container}>
+        <div>Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className={container}>

@@ -1,5 +1,5 @@
 // src/pages/protected/ModeratorDashboard.jsx
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { css } from '@emotion/css';
 import { useAuth } from '../../context/AuthContext';
@@ -164,7 +164,7 @@ export default function ModeratorDashboard() {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/');
+    navigate('/', { replace: true });
   };
 
   const navigateToRoom = (roomId) => {
@@ -178,7 +178,7 @@ export default function ModeratorDashboard() {
   };
 
   if (!moderator) {
-    navigate('/mod-login');
+    navigate('/staff-login');
     return null;
   }
 
