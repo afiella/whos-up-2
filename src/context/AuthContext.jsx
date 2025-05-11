@@ -58,7 +58,7 @@ export function AuthProvider({ children }) {
           const adminDoc = await getDoc(doc(db, 'admin', 'admin'));
           
           if (adminDoc.exists()) {
-            console.log("Admin document found:", adminDoc.data());
+            console.log("Admin document found");
             const adminData = adminDoc.data();
             
             // Check if this user is the admin
@@ -67,70 +67,44 @@ export function AuthProvider({ children }) {
               setModerator({
                 uid: user.uid,
                 email: user.email,
-                username: adminData.username,
-                displayName: adminData.displayName,
+                username: adminData.username || 'admin',
+                displayName: adminData.displayName || 'Admin',
                 isAdmin: true,
                 isModerator: true,
                 assignedRoom: null // Admin has access to all rooms
               });
               setIsAuthenticated(true);
-            } else {
-              console.log("Not admin, checking moderators collection...");
-              // Check if user is in the moderators collection
-              const moderatorsRef = collection(db, 'moderators');
-              const q = query(moderatorsRef, where('email', '==', user.email));
-              const querySnapshot = await getDocs(q);
-              
-              if (!querySnapshot.empty) {
-                console.log("Moderator document found");
-                const moderatorDoc = querySnapshot.docs[0];
-                const moderatorData = moderatorDoc.data();
-                setModerator({
-                  uid: user.uid,
-                  email: user.email,
-                  username: moderatorData.username,
-                  displayName: moderatorData.displayName,
-                  isAdmin: moderatorData.isAdmin || false,
-                  isModerator: true,
-                  assignedRoom: moderatorData.assignedRoom || null
-                });
-                setIsAuthenticated(true);
-              } else {
-                console.log("User not found in moderators collection");
-                // User exists in Authentication but not in Firestore
-                await signOut(auth);
-                setIsAuthenticated(false);
-                setModerator(null);
-              }
+              setLoading(false);
+              return; // Exit early if admin
             }
+          }
+          
+          console.log("Not admin, checking moderators collection...");
+          // Check if user is in the moderators collection
+          const moderatorsRef = collection(db, 'moderators');
+          const q = query(moderatorsRef, where('email', '==', user.email));
+          const querySnapshot = await getDocs(q);
+          
+          if (!querySnapshot.empty) {
+            console.log("Moderator document found");
+            const moderatorDoc = querySnapshot.docs[0];
+            const moderatorData = moderatorDoc.data();
+            setModerator({
+              uid: user.uid,
+              email: user.email,
+              username: moderatorData.username,
+              displayName: moderatorData.displayName,
+              isAdmin: moderatorData.isAdmin || false,
+              isModerator: true,
+              assignedRoom: moderatorData.assignedRoom || null
+            });
+            setIsAuthenticated(true);
           } else {
-            console.log("Admin document not found, checking moderators collection...");
-            // Check if user is in the moderators collection
-            const moderatorsRef = collection(db, 'moderators');
-            const q = query(moderatorsRef, where('email', '==', user.email));
-            const querySnapshot = await getDocs(q);
-            
-            if (!querySnapshot.empty) {
-              console.log("Moderator document found");
-              const moderatorDoc = querySnapshot.docs[0];
-              const moderatorData = moderatorDoc.data();
-              setModerator({
-                uid: user.uid,
-                email: user.email,
-                username: moderatorData.username,
-                displayName: moderatorData.displayName,
-                isAdmin: moderatorData.isAdmin || false,
-                isModerator: true,
-                assignedRoom: moderatorData.assignedRoom || null
-              });
-              setIsAuthenticated(true);
-            } else {
-              console.log("User not found in moderators collection");
-              // User exists in Authentication but not in Firestore
-              await signOut(auth);
-              setIsAuthenticated(false);
-              setModerator(null);
-            }
+            console.log("User not found in moderators collection");
+            // User exists in Authentication but not in Firestore
+            await signOut(auth);
+            setIsAuthenticated(false);
+            setModerator(null);
           }
         } catch (error) {
           console.error('Auth state change error:', error);
@@ -176,8 +150,8 @@ export function AuthProvider({ children }) {
               setIsAuthenticated(true);
               setModerator({
                 email: email,
-                username: adminData.username,
-                displayName: adminData.displayName,
+                username: adminData.username || 'admin',
+                displayName: adminData.displayName || 'Admin',
                 isAdmin: true,
                 isModerator: true,
                 assignedRoom: null // Admin has access to all rooms
@@ -246,19 +220,26 @@ export function AuthProvider({ children }) {
     }
   };
     
- // Admin login with master password - Simplified
- const adminLogin = async (password) => {
+  // Admin login with master password
+  const adminLogin = async (password) => {
     try {
+      setLoading(true);
       const adminEmail = 'ellabellosei@gmail.com';
       
       console.log('Attempting admin login with email:', adminEmail);
       
-      // Sign in with admin credentials
+      // Sign in with Firebase Auth
       await signInWithEmailAndPassword(auth, adminEmail, password);
-      console.log('Admin login successful!');
+      console.log('Firebase auth successful!');
       
       // Get admin data from Firestore
-      const adminDoc = await getDoc(doc(db, 'admin', 'admin'));
+      let adminDoc;
+      try {
+        adminDoc = await getDoc(doc(db, 'admin', 'admin'));
+      } catch (docError) {
+        console.log('Could not fetch admin doc:', docError);
+      }
+      
       let adminData = {
         email: adminEmail,
         username: 'admin',
@@ -268,7 +249,7 @@ export function AuthProvider({ children }) {
         assignedRoom: null
       };
       
-      if (adminDoc.exists()) {
+      if (adminDoc && adminDoc.exists()) {
         const docData = adminDoc.data();
         adminData = {
           ...adminData,
@@ -277,15 +258,23 @@ export function AuthProvider({ children }) {
         };
       }
       
-      // Set state
+      // Set the states properly
       setModerator(adminData);
       setIsAuthenticated(true);
       
+      console.log('Admin state set:', adminData);
+      console.log('isAuthenticated:', true);
+      
+      // Add a small delay to ensure state is set
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      setLoading(false);
       return true;
     } catch (error) {
       console.error('Admin login error:', error);
       setIsAuthenticated(false);
       setModerator(null);
+      setLoading(false);
       return false;
     }
   };

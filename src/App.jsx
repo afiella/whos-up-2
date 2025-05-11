@@ -43,6 +43,7 @@ export default function App() {
             path="/admin-dashboard" 
             element={
               <ProtectedRoute adminOnly={true}>
+                {console.log('Rendering admin dashboard route')}
                 <AdminDashboard />
               </ProtectedRoute>
             } 

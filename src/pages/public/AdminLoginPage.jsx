@@ -1,5 +1,5 @@
 // src/pages/public/AdminLoginPage.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { css } from '@emotion/css';
 import { useAuth } from '../../context/AuthContext';
@@ -8,10 +8,17 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const { adminLogin } = useAuth();
+  const { adminLogin, isAuthenticated, moderator } = useAuth();
   const navigate = useNavigate();
 
-  // Styling (same as before)
+  // Check if already logged in as admin
+  useEffect(() => {
+    if (isAuthenticated && moderator?.isAdmin) {
+      navigate('/admin-dashboard', { replace: true });
+    }
+  }, [isAuthenticated, moderator, navigate]);
+
+  // Styling is similar to ModeratorLoginPage for consistency
   const container = css`
     display: flex;
     align-items: center;
@@ -120,6 +127,8 @@ export default function AdminLoginPage() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setError('');
+    
     if (!password) {
       setError('Please enter admin password');
       return;
@@ -127,16 +136,21 @@ export default function AdminLoginPage() {
 
     try {
       setIsLoggingIn(true);
+      console.log('Starting admin login...');
+      
       const success = await adminLogin(password);
       
       if (success) {
-        // Navigate to the admin dashboard directly
-        navigate('/admin-dashboard');
+        console.log('Admin login successful, navigating to dashboard...');
+        // Navigate to the admin dashboard
+        navigate('/admin-dashboard', { replace: true });
       } else {
+        console.log('Admin login failed');
         setError('Invalid admin password');
         setIsLoggingIn(false);
       }
     } catch (error) {
+      console.error('Login error:', error);
       setError('Login failed: ' + error.message);
       setIsLoggingIn(false);
     }
@@ -156,6 +170,7 @@ export default function AdminLoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               className={input}
               disabled={isLoggingIn}
+              autoFocus
             />
           </div>
           

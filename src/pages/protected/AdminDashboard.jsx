@@ -7,7 +7,9 @@ import { db } from '../../firebase/config';
 import { onSnapshot, doc, updateDoc } from 'firebase/firestore';
 
 export default function AdminDashboard() {
+  console.log('AdminDashboard component rendering');
   const { moderator, logout, registerModerator, fetchModerators } = useAuth();
+  console.log('Current moderator state:', moderator);
   const navigate = useNavigate();
   
   // State for all rooms data
