@@ -123,50 +123,67 @@ export function AuthProvider({ children }) {
     return () => unsubscribe();
   }, []);
 
-  // UNIFIED LOGIN function for both admin and moderators
+  // ADMIN LOGIN function - separate from moderator login
+  const adminLogin = async (password) => {
+    try {
+      setLoading(true);
+      console.log('Attempting admin login...');
+      
+      // Get admin document from Firestore
+      const adminDoc = await getDoc(doc(db, 'admin', 'admin'));
+      
+      if (!adminDoc.exists()) {
+        console.log('Admin document not found');
+        return false;
+      }
+      
+      const adminData = adminDoc.data();
+      const adminEmail = adminData.email;
+      
+      console.log('Admin document found, email:', adminEmail);
+      
+      if (!adminEmail) {
+        console.log('Admin email not found in document');
+        return false;
+      }
+      
+      // Attempt to sign in with admin credentials
+      try {
+        console.log('Signing in with admin email and password...');
+        await signInWithEmailAndPassword(auth, adminEmail, password);
+        console.log('Admin login successful!');
+        
+        // Set authenticated state
+        setIsAuthenticated(true);
+        setModerator({
+          email: adminEmail,
+          username: adminData.username || 'admin',
+          displayName: adminData.displayName || 'Admin',
+          isAdmin: true,
+          isModerator: true,
+          assignedRoom: null // Admin has access to all rooms
+        });
+        
+        return true;
+      } catch (signInError) {
+        console.error('Admin sign-in error:', signInError.code, signInError.message);
+        return false;
+      }
+    } catch (error) {
+      console.error('Admin login error:', error);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // MODERATOR LOGIN function - separate from admin login
   const login = async (username, password) => {
     try {
       setLoading(true);
-      console.log('Attempting login with username:', username);
+      console.log('Attempting moderator login with username:', username);
       
-      // Check admin collection first (admin is a special document)
-      console.log('Checking if user is admin...');
-      const adminDoc = await getDoc(doc(db, 'admin', 'admin'));
-      
-      if (adminDoc.exists()) {
-        const adminData = adminDoc.data();
-        console.log('Admin document exists, admin username:', adminData.username);
-        
-        if (adminData.username === username) {
-          const email = adminData.email;
-          console.log('User is admin, using email for login:', email);
-          
-          if (email) {
-            try {
-              console.log('Signing in with email and password...');
-              await signInWithEmailAndPassword(auth, email, password);
-              console.log('Admin login successful!');
-              // Explicitly set authenticated state
-              setIsAuthenticated(true);
-              setModerator({
-                email: email,
-                username: adminData.username || 'admin',
-                displayName: adminData.displayName || 'Admin',
-                isAdmin: true,
-                isModerator: true,
-                assignedRoom: null // Admin has access to all rooms
-              });
-              return true;
-            } catch (signInError) {
-              console.error('Admin sign-in error:', signInError);
-              return false;
-            }
-          }
-        }
-      }
-      
-      // If not admin, check moderators collection
-      console.log('Not admin, checking moderators collection...');
+      // Check moderators collection
       const moderatorsRef = collection(db, 'moderators');
       const q = query(moderatorsRef, where('username', '==', username));
       console.log('Querying moderators collection for username:', username);
@@ -194,7 +211,8 @@ export function AuthProvider({ children }) {
         console.log('Signing in with email and password...');
         await signInWithEmailAndPassword(auth, email, password);
         console.log('Moderator login successful!');
-        // Explicitly set authenticated state
+        
+        // Set authenticated state
         setIsAuthenticated(true);
         setModerator({
           email: email,
@@ -204,9 +222,10 @@ export function AuthProvider({ children }) {
           isModerator: true,
           assignedRoom: moderatorData.assignedRoom || null
         });
+        
         return true;
       } catch (signInError) {
-        console.error('Moderator sign-in error:', signInError);
+        console.error('Moderator sign-in error:', signInError.code, signInError.message);
         return false;
       }
     } catch (error) {
@@ -373,7 +392,8 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider value={{
       isAuthenticated,
       moderator,
-      login,  // Now handles both admin and moderator login
+      login,       // For moderator login
+      adminLogin,  // For admin login
       logout,
       registerModerator,
       fetchModerators,

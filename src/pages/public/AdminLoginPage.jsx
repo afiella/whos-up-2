@@ -8,7 +8,7 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const { login, isAuthenticated, moderator } = useAuth();
+  const { adminLogin, isAuthenticated, moderator } = useAuth(); // Changed from login to adminLogin
   const navigate = useNavigate();
 
   // Redirect if already logged in as admin
@@ -146,8 +146,8 @@ export default function AdminLoginPage() {
       setIsLoggingIn(true);
       console.log('Attempting admin login...');
       
-      // Always use 'admin' as username for admin login
-      const success = await login('admin', password);
+      // Use adminLogin with just the password
+      const success = await adminLogin(password); // Changed to use adminLogin
       
       if (success) {
         console.log('Admin login successful, waiting for state update...');
@@ -192,7 +192,7 @@ export default function AdminLoginPage() {
           </button>
           
           <div className={note}>
-            Username: admin (pre-filled)
+            Admin login - Password only required
           </div>
         </form>
         
