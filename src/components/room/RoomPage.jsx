@@ -10,7 +10,7 @@ import QueueDisplay from './QueueDisplay';
 import ModeratorQueueControl from './ModeratorQueueControl';
 import AdminBadge from '../ui/AdminBadge';
 import { requestNotificationPermission, areNotificationsEnabled, showNotification } from '../../utils/notifications';
-
+import { areNotificationsSupported, isIOS } from '../../utils/notifications';
 
 export default function RoomPage({ roomId, roomName }) {
   const location = useLocation();
@@ -394,15 +394,21 @@ export default function RoomPage({ roomId, roomName }) {
         </div>
       </div>
       
-      {/* Notification Permission Banner */}
-      {notificationBanner && (
-        <div className={notificationBannerStyle}>
-          <span>Enable notifications to get alerted when it's your turn!</span>
-          <button className={bannerButton} onClick={handleRequestNotifications}>
-            Enable
-          </button>
-        </div>
-      )}
+      // Then modify the notification banner code:
+{notificationBanner && (
+  <div className={notificationBannerStyle}>
+    {isIOS() ? (
+      <span>Notifications aren't supported on iOS devices, but you'll still see updates here.</span>
+    ) : (
+      <>
+        <span>Enable notifications to get alerted when it's your turn!</span>
+        <button className={bannerButton} onClick={handleRequestNotifications}>
+          Enable
+        </button>
+      </>
+    )}
+  </div>
+)}
       
       {/* Queue Display */}
       <div className={card}>

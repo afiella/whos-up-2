@@ -1,10 +1,32 @@
+// src/utils/notifications.js - UPDATED
+
 /**
- * Request notification permission from the user
- * @returns {Promise<boolean>} - Whether permission was granted
+ * Check if the device is running iOS
+ * @returns {boolean} - Whether the device is running iOS
  */
-export const requestNotificationPermission = async () => {
+export const isIOS = () => {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  };
+  
+  /**
+   * Check if notifications are supported by the browser
+   * @returns {boolean} - Whether notifications are supported
+   */
+  export const areNotificationsSupported = () => {
+    // iOS doesn't support web notifications
+    if (isIOS()) {
+      return false;
+    }
+    return 'Notification' in window;
+  };
+  
+  /**
+   * Request notification permission from the user
+   * @returns {Promise<boolean>} - Whether permission was granted
+   */
+  export const requestNotificationPermission = async () => {
     // Check if browser supports notifications
-    if (!('Notification' in window)) {
+    if (!areNotificationsSupported()) {
       console.log('This browser does not support notifications');
       return false;
     }
@@ -37,8 +59,11 @@ export const requestNotificationPermission = async () => {
    * @returns {boolean} - Whether notifications are enabled
    */
   export const areNotificationsEnabled = () => {
+    if (!areNotificationsSupported()) {
+      return false;
+    }
+    
     return (
-      ('Notification' in window) &&
       Notification.permission === 'granted' &&
       localStorage.getItem('notificationsEnabled') === 'true'
     );
