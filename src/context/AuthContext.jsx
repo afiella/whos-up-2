@@ -59,7 +59,7 @@ export function AuthProvider({ children }) {
       setLoading(true);
       
       // Simple password check
-      if (password === afiella) {
+      if (password === ADMIN_PASSWORD) {
         const adminData = {
           username: 'admin',
           displayName: 'Administrator',
