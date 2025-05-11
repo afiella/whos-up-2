@@ -70,7 +70,8 @@ export function AuthProvider({ children }) {
                 username: adminData.username,
                 displayName: adminData.displayName,
                 isAdmin: true,
-                isModerator: true
+                isModerator: true,
+                assignedRoom: null // Admin has access to all rooms
               });
               setIsAuthenticated(true);
             } else {
@@ -90,7 +91,8 @@ export function AuthProvider({ children }) {
                   username: moderatorData.username,
                   displayName: moderatorData.displayName,
                   isAdmin: moderatorData.isAdmin || false,
-                  isModerator: true
+                  isModerator: true,
+                  assignedRoom: moderatorData.assignedRoom || null
                 });
                 setIsAuthenticated(true);
               } else {
@@ -118,7 +120,8 @@ export function AuthProvider({ children }) {
                 username: moderatorData.username,
                 displayName: moderatorData.displayName,
                 isAdmin: moderatorData.isAdmin || false,
-                isModerator: true
+                isModerator: true,
+                assignedRoom: moderatorData.assignedRoom || null
               });
               setIsAuthenticated(true);
             } else {
@@ -144,9 +147,9 @@ export function AuthProvider({ children }) {
     
     // Cleanup subscription on unmount
     return () => unsubscribe();
-  }, []); // This closes the useEffect
+  }, []);
 
-  // LOGIN function - MOVED OUTSIDE useEffect
+  // LOGIN function
   const login = async (username, password) => {
     try {
       setLoading(true);
@@ -176,7 +179,8 @@ export function AuthProvider({ children }) {
                 username: adminData.username,
                 displayName: adminData.displayName,
                 isAdmin: true,
-                isModerator: true
+                isModerator: true,
+                assignedRoom: null // Admin has access to all rooms
               });
               return true;
             } catch (signInError) {
@@ -226,7 +230,8 @@ export function AuthProvider({ children }) {
           username: moderatorData.username,
           displayName: moderatorData.displayName,
           isAdmin: moderatorData.isAdmin || false,
-          isModerator: true
+          isModerator: true,
+          assignedRoom: moderatorData.assignedRoom || null
         });
         return true;
       } catch (signInError) {
@@ -241,7 +246,7 @@ export function AuthProvider({ children }) {
     }
   };
     
-  // Admin login with master password - MOVED OUTSIDE useEffect
+  // Admin login with master password
   const adminLogin = async (password) => {
     try {
       setLoading(true);
@@ -258,47 +263,46 @@ export function AuthProvider({ children }) {
         console.log('Admin login successful!');
         
         // Get admin data from Firestore
-      const adminDoc = await getDoc(doc(db, 'admin', 'admin'));
-      let adminData = {
-        email: adminEmail,
-        username: 'admin',
-        displayName: 'Admin',
-        isAdmin: true,
-        isModerator: true
-      };
-      
-      if (adminDoc.exists()) {
-        const docData = adminDoc.data();
-        adminData = {
-          ...adminData,
-          username: docData.username || 'admin',
-          displayName: docData.displayName || 'Admin',
-        };
+        const adminDoc = await getDoc(doc(db, 'admin', 'admin'));
+        if (adminDoc.exists()) {
+          const adminData = adminDoc.data();
+          // Explicitly set the authenticated state
+          setIsAuthenticated(true);
+          setModerator({
+            email: adminEmail,
+            username: adminData.username || 'admin',
+            displayName: adminData.displayName || 'Admin',
+            isAdmin: true,
+            isModerator: true,
+            assignedRoom: null // Admin has access to all rooms
+          });
+        } else {
+          // If admin doc doesn't exist, still set basic admin info
+          setIsAuthenticated(true);
+          setModerator({
+            email: adminEmail,
+            username: 'admin',
+            displayName: 'Admin',
+            isAdmin: true,
+            isModerator: true,
+            assignedRoom: null // Admin has access to all rooms
+          });
+        }
+        
+        return true;
+      } catch (signInError) {
+        console.error('Admin sign-in error:', signInError);
+        return false;
       }
-      
-      // Set state after successful login
-      setModerator(adminData);
-      setIsAuthenticated(true);
-      
-      // Small delay to ensure state updates properly
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      return true;
-    } catch (signInError) {
-      console.error('Admin sign-in error:', signInError);
-      setIsAuthenticated(false);
-      setModerator(null);
+    } catch (error) {
+      console.error('Admin login error:', error);
       return false;
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error('Admin login error:', error);
-    return false;
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
-  // Logout function - MOVED OUTSIDE useEffect
+  // Logout function
   const logout = async () => {
     try {
       setLoading(true);
@@ -315,7 +319,7 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Register a new moderator - MOVED OUTSIDE useEffect
+  // Register a new moderator with room assignment
   const registerModerator = async (newModerator) => {
     try {
       setLoading(true);
@@ -360,7 +364,7 @@ export function AuthProvider({ children }) {
         const uid = userCredential.user.uid;
         console.log('User created with UID:', uid);
         
-        // Store moderator in Firestore without password
+        // Store moderator in Firestore with room assignment
         console.log('Storing moderator in Firestore...');
         await setDoc(doc(db, 'moderators', uid), {
           username: newModerator.username,
@@ -368,6 +372,7 @@ export function AuthProvider({ children }) {
           email: newModerator.email,
           isModerator: true,
           isAdmin: false,
+          assignedRoom: newModerator.assignedRoom, // Add room assignment
           createdAt: new Date().toISOString()
         });
         
@@ -388,7 +393,7 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Function to fetch all moderators (admin only) - MOVED OUTSIDE useEffect
+  // Function to fetch all moderators (admin only)
   const fetchModerators = async () => {
     try {
       setLoading(true);
@@ -414,7 +419,8 @@ export function AuthProvider({ children }) {
           displayName: data.displayName,
           email: data.email,
           isModerator: data.isModerator,
-          isAdmin: data.isAdmin || false
+          isAdmin: true,
+          assignedRoom: null // Admin has access to all rooms
         });
       }
       
@@ -433,7 +439,8 @@ export function AuthProvider({ children }) {
           displayName: data.displayName,
           email: data.email,
           isModerator: data.isModerator,
-          isAdmin: data.isAdmin || false
+          isAdmin: data.isAdmin || false,
+          assignedRoom: data.assignedRoom || null
         });
       });
       

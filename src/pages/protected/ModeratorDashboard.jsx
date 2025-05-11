@@ -3,42 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { css } from '@emotion/css';
 import { useAuth } from '../../context/AuthContext';
+import AdminBadge from '../../components/ui/AdminBadge';
+import ModeratorBadge from '../../components/ui/ModeratorBadge';
 
 export default function ModeratorDashboard() {
-  const { moderator, logout, registerModerator, fetchModerators, loading: authLoading } = useAuth();
+  const { moderator, logout } = useAuth();
   const navigate = useNavigate();
-  
-  // For adding new moderators (admin only)
-  const [newUsername, setNewUsername] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [newDisplayName, setNewDisplayName] = useState('');
-  const [message, setMessage] = useState('');
-  const [messageType, setMessageType] = useState(''); // 'success' or 'error'
-  
-  // List of moderators (admin only)
-  const [moderators, setModerators] = useState([]);
-  const [loadingModerators, setLoadingModerators] = useState(false);
 
-  // Load moderators from Firebase (admin only)
-  useEffect(() => {
-    const loadModerators = async () => {
-      if (moderator?.isAdmin && !authLoading) {
-        setLoadingModerators(true);
-        try {
-          const fetchedModerators = await fetchModerators();
-          setModerators(fetchedModerators);
-        } catch (error) {
-          console.error('Error loading moderators:', error);
-        } finally {
-          setLoadingModerators(false);
-        }
-      }
-    };
-    
-    loadModerators();
-  }, [moderator, fetchModerators, authLoading]);
-
-  // Styling
+  // Styles
   const container = css`
     min-height: 100vh;
     background-color: #fff8f0;
@@ -51,6 +23,8 @@ export default function ModeratorDashboard() {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
   `;
 
   const title = css`
@@ -73,11 +47,6 @@ export default function ModeratorDashboard() {
     &:hover {
       background-color: #c56c6c;
     }
-    
-    &:disabled {
-      background-color: #d3a7a7;
-      cursor: not-allowed;
-    }
   `;
 
   const card = css`
@@ -94,154 +63,120 @@ export default function ModeratorDashboard() {
     font-size: 1.25rem;
     color: #4b3b2b;
     margin-bottom: 1rem;
-  `;
-
-  const form = css`
     display: flex;
-    flex-direction: column;
-    gap: 1rem;
+    align-items: center;
+    gap: 0.5rem;
   `;
 
-  const formRow = css`
+  const text = css`
+    font-family: Poppins, sans-serif;
+    color: #4b3b2b;
+    line-height: 1.6;
+  `;
+
+  const actionCard = css`
+    background-color: white;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+    
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+  `;
+
+  const buttonGroup = css`
     display: flex;
     gap: 1rem;
     flex-wrap: wrap;
   `;
 
-  const formGroup = css`
-    flex: 1;
-    min-width: 200px;
-  `;
-
-  const label = css`
-    display: block;
+  const secondaryButton = css`
+    background-color: #8d9e78;
+    color: white;
+    border: none;
+    border-radius: 1.5rem;
+    padding: 0.5rem 1.25rem;
     font-family: Poppins, sans-serif;
     font-size: 0.875rem;
-    color: #4b3b2b;
-    margin-bottom: 0.5rem;
-  `;
-
-  const input = css`
-    width: 100%;
-    padding: 0.75rem 1rem;
-    border-radius: 0.75rem;
-    border: 1px solid #eacdca;
-    font-family: Poppins, sans-serif;
-    font-size: 1rem;
-    outline: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
     
-    &:focus {
-      border-color: #d67b7b;
+    &:hover {
+      background-color: #768a62;
     }
   `;
 
-  const moderatorsList = css`
+  const badge = css`
+    display: inline-block;
+    background-color: #a47148;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.875rem;
+    font-family: Poppins, sans-serif;
+    font-weight: 600;
+  `;
+
+  const roomBadge = css`
+    display: inline-block;
+    background-color: #d67b7b;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.875rem;
+    font-family: Poppins, sans-serif;
+    font-weight: 600;
+    margin-left: 0.5rem;
+  `;
+
+  const infoGrid = css`
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 1rem;
     margin-top: 1rem;
   `;
 
-  const moderatorCard = css`
-    background-color: white;
-    padding: 1rem;
-    border-radius: 0.5rem;
-    border: 1px solid #eacdca;
-  `;
-
-  const moderatorName = css`
-    font-family: Poppins, sans-serif;
-    font-weight: 600;
-    color: #4b3b2b;
-    margin-bottom: 0.25rem;
-  `;
-
-  const moderatorInfo = css`
-    font-family: Poppins, sans-serif;
-    font-size: 0.875rem;
-    color: #6b6b6b;
-  `;
-
-  const loadingOverlay = css`
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(255, 248, 240, 0.9);
+  const infoItem = css`
     display: flex;
     align-items: center;
-    justify-content: center;
-    z-index: 1000;
+    gap: 0.5rem;
     font-family: Poppins, sans-serif;
-    font-size: 1.25rem;
-    color: #a47148;
+    color: #4b3b2b;
   `;
 
+  const infoLabel = css`
+    font-weight: 600;
+  `;
+
+  // Helper function to get room display name
+  const getRoomDisplayName = (roomId) => {
+    switch (roomId) {
+      case 'bh': return 'BH';
+      case '59': return '59';
+      case 'ashland': return 'Ashland';
+      default: return roomId;
+    }
+  };
+
   const handleLogout = async () => {
-    try {
-      await logout();
-      navigate('/');
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+    await logout();
+    navigate('/');
   };
 
-  const handleAddModerator = async (e) => {
-    e.preventDefault();
-    
-    if (!newUsername || !newPassword || !newDisplayName) {
-      setMessage('All fields are required');
-      setMessageType('error');
-      return;
-    }
-    
-    try {
-      // Create new moderator object
-      const newModerator = {
-        username: newUsername,
-        password: newPassword,
-        displayName: newDisplayName,
-        email: `${newUsername}@whosup.com`, // Generate a unique email
-        isModerator: true
-      };
-      
-      const result = await registerModerator(newModerator);
-      
-      if (result.success) {
-        setMessage('Moderator added successfully!');
-        setMessageType('success');
-        
-        // Clear form fields
-        setNewUsername('');
-        setNewPassword('');
-        setNewDisplayName('');
-        
-        // Refresh the moderator list
-        if (moderator?.isAdmin) {
-          const fetchedModerators = await fetchModerators();
-          setModerators(fetchedModerators);
-        }
-      } else {
-        setMessage(result.message);
-        setMessageType('error');
+  const navigateToRoom = (roomId) => {
+    navigate(`/${roomId}`, {
+      state: {
+        name: moderator.displayName || moderator.username,
+        shiftEnd: '8:00 PM',
+        shiftType: moderator.isAdmin ? 'admin' : 'moderator'
       }
-    } catch (error) {
-      setMessage('Error adding moderator');
-      setMessageType('error');
-    }
+    });
   };
 
-  // Show loading state while auth is checking
-  if (authLoading) {
-    return (
-      <div className={loadingOverlay}>
-        Loading dashboard...
-      </div>
-    );
-  }
-
-  // If no moderator data, redirect to login
   if (!moderator) {
     navigate('/mod-login');
     return null;
@@ -253,110 +188,165 @@ export default function ModeratorDashboard() {
         <h1 className={title}>
           {moderator.isAdmin ? 'Admin Dashboard' : 'Moderator Dashboard'}
         </h1>
-        <button className={button} onClick={handleLogout}>
-          Logout
-        </button>
+        <div className={buttonGroup}>
+          {moderator.isAdmin && (
+            <button className={secondaryButton} onClick={() => navigate('/admin-dashboard')}>
+              Admin Command Center
+            </button>
+          )}
+          <button className={button} onClick={handleLogout}>
+            Logout
+          </button>
+        </div>
       </div>
-      
+
+      {/* Welcome Card */}
       <div className={card}>
         <div className={cardTitle}>
           Welcome, {moderator.displayName || moderator.username}!
+          {moderator.isAdmin ? <AdminBadge /> : <ModeratorBadge />}
         </div>
-        <p style={{ fontFamily: 'Poppins, sans-serif', color: '#4b3b2b' }}>
+        
+        <div className={infoGrid}>
+          <div className={infoItem}>
+            <span className={infoLabel}>Role:</span>
+            <span>{moderator.isAdmin ? 'Administrator' : 'Moderator'}</span>
+          </div>
+          
+          <div className={infoItem}>
+            <span className={infoLabel}>Username:</span>
+            <span>{moderator.username}</span>
+          </div>
+          
+          {moderator.assignedRoom && !moderator.isAdmin && (
+            <div className={infoItem}>
+              <span className={infoLabel}>Assigned Room:</span>
+              <span className={roomBadge}>
+                {getRoomDisplayName(moderator.assignedRoom)}
+              </span>
+            </div>
+          )}
+        </div>
+        
+        <p className={text} style={{ marginTop: '1rem' }}>
           {moderator.isAdmin 
-            ? 'You are logged in as an admin. You can manage moderators and access all features.'
-            : 'You are logged in as a moderator. You can join the game with a special badge.'}
+            ? 'You have full administrative access to all rooms and can manage moderators.'
+            : `You are a moderator for the ${getRoomDisplayName(moderator.assignedRoom)} room. You can manage the queue and assist players.`}
         </p>
       </div>
-      
-      {/* Admin-only section to add new moderators */}
-      {moderator.isAdmin && (
-        <>
-          <div className={card}>
-            <div className={cardTitle}>Add New Moderator</div>
-            
-            <form className={form} onSubmit={handleAddModerator}>
-              <div className={formRow}>
-                <div className={formGroup}>
-                  <label className={label}>Username</label>
-                  <input
-                    type="text"
-                    className={input}
-                    value={newUsername}
-                    onChange={(e) => setNewUsername(e.target.value)}
-                    placeholder="Enter username"
-                  />
-                </div>
-                
-                <div className={formGroup}>
-                  <label className={label}>Password</label>
-                  <input
-                    type="password"
-                    className={input}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Enter password"
-                  />
-                </div>
-              </div>
-              
-              <div className={formGroup}>
-                <label className={label}>Display Name</label>
-                <input
-                  type="text"
-                  className={input}
-                  value={newDisplayName}
-                  onChange={(e) => setNewDisplayName(e.target.value)}
-                  placeholder="Enter display name"
-                />
-              </div>
-              
-              <button type="submit" className={button}>
-                Add Moderator
-              </button>
-            </form>
-            
-            {message && (
-              <div style={{
-                marginTop: '1rem',
-                padding: '0.75rem',
-                borderRadius: '0.5rem',
-                backgroundColor: messageType === 'success' ? '#e0f2e9' : '#f9e0e0',
-                color: messageType === 'success' ? '#2e7d32' : '#c62828',
-                fontFamily: 'Poppins, sans-serif'
-              }}>
-                {message}
-              </div>
-            )}
-          </div>
 
-          {/* Moderators List */}
-          <div className={card}>
-            <div className={cardTitle}>Current Moderators</div>
-            {loadingModerators ? (
-              <p style={{ fontFamily: 'Poppins, sans-serif', color: '#6b6b6b' }}>
-                Loading moderators...
-              </p>
-            ) : moderators.length > 0 ? (
-              <div className={moderatorsList}>
-                {moderators.map((mod) => (
-                  <div key={mod.id} className={moderatorCard}>
-                    <div className={moderatorName}>{mod.displayName}</div>
-                    <div className={moderatorInfo}>Username: {mod.username}</div>
-                    <div className={moderatorInfo}>
-                      Role: {mod.isAdmin ? 'Admin' : 'Moderator'}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p style={{ fontFamily: 'Poppins, sans-serif', color: '#6b6b6b' }}>
-                No moderators found.
-              </p>
-            )}
+      {/* Quick Actions */}
+      <div className={card}>
+        <div className={cardTitle}>Quick Actions</div>
+        
+        {moderator.isAdmin ? (
+          // Admin Quick Actions
+          <div>
+            <p className={text} style={{ marginBottom: '1rem' }}>
+              Access any room or manage the entire system:
+            </p>
+            <div className={buttonGroup}>
+              <button className={button} onClick={() => navigateToRoom('bh')}>
+                Enter BH Room
+              </button>
+              <button className={button} onClick={() => navigateToRoom('59')}>
+                Enter 59 Room
+              </button>
+              <button className={button} onClick={() => navigateToRoom('ashland')}>
+                Enter Ashland Room
+              </button>
+              <button className={secondaryButton} onClick={() => navigate('/admin-dashboard')}>
+                View All Rooms
+              </button>
+            </div>
           </div>
-        </>
-      )}
+        ) : (
+          // Moderator Quick Actions
+          moderator.assignedRoom && (
+            <div>
+              <p className={text} style={{ marginBottom: '1rem' }}>
+                Access your assigned room to manage the queue:
+              </p>
+              <button 
+                className={button}
+                onClick={() => navigateToRoom(moderator.assignedRoom)}
+                style={{ marginRight: '1rem' }}
+              >
+                Enter {getRoomDisplayName(moderator.assignedRoom)} Room
+              </button>
+            </div>
+          )
+        )}
+      </div>
+
+      {/* Instructions Card */}
+      <div className={card}>
+        <div className={cardTitle}>How to Use</div>
+        
+        {moderator.isAdmin ? (
+          <div className={text}>
+            <h3 style={{ marginBottom: '0.5rem', color: '#4b3b2b' }}>As an Administrator:</h3>
+            <ul style={{ paddingLeft: '1.5rem', marginTop: '0.5rem' }}>
+              <li>Access the Admin Command Center to see all rooms at once</li>
+              <li>Add new moderators and assign them to specific rooms</li>
+              <li>Clear queues or manage players in any room</li>
+              <li>Enter any room to help with queue management</li>
+              <li>Your username appears with a special Admin badge</li>
+            </ul>
+          </div>
+        ) : (
+          <div className={text}>
+            <h3 style={{ marginBottom: '0.5rem', color: '#4b3b2b' }}>As a Moderator:</h3>
+            <ul style={{ paddingLeft: '1.5rem', marginTop: '0.5rem' }}>
+              <li>Enter your assigned room to manage the queue</li>
+              <li>Use drag-and-drop to reorder players in the queue</li>
+              <li>Your username appears with a Moderator badge</li>
+              <li>Help players with queue management and issues</li>
+              <li>You can join the queue yourself if needed</li>
+            </ul>
+          </div>
+        )}
+      </div>
+
+      {/* Status Card */}
+      <div className={card}>
+        <div className={cardTitle}>Your Status</div>
+        <div className={infoGrid}>
+          <div className={actionCard}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>
+                {moderator.isAdmin ? '👑' : '🛡️'}
+              </div>
+              <div style={{ fontWeight: '600', color: '#4b3b2b' }}>
+                {moderator.isAdmin ? 'Administrator' : 'Room Moderator'}
+              </div>
+              {!moderator.isAdmin && moderator.assignedRoom && (
+                <div style={{ marginTop: '0.5rem' }}>
+                  <span className={roomBadge}>
+                    {getRoomDisplayName(moderator.assignedRoom)} Room
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <div className={actionCard}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>
+                {moderator.isAdmin ? '🏢' : '🚪'}
+              </div>
+              <div style={{ fontWeight: '600', color: '#4b3b2b' }}>
+                {moderator.isAdmin ? 'All Rooms Access' : 'Single Room Access'}
+              </div>
+              <div style={{ marginTop: '0.5rem', color: '#6b6b6b' }}>
+                {moderator.isAdmin 
+                  ? 'Can manage all rooms' 
+                  : `Can manage ${getRoomDisplayName(moderator.assignedRoom)}`}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
