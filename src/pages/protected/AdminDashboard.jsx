@@ -383,7 +383,7 @@ export default function AdminDashboard() {
   const navigateToRoom = (roomId) => {
     navigate(`/${roomId}`, { 
       state: { 
-        name: moderator.displayName || moderator.username,
+        name: 'Ella',
         shiftEnd: '8:00 PM',
         shiftType: 'admin'
       } 
