@@ -1,9 +1,9 @@
-// src/components/auth/ProtectedRoute.jsx
+// src/components/auth/AdminRoute.jsx
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
-export default function ProtectedRoute({ children }) {
+export default function AdminRoute({ children }) {
   const { isAuthenticated, moderator, loading } = useAuth();
   
   // Show loading while checking auth state
@@ -24,11 +24,16 @@ export default function ProtectedRoute({ children }) {
     );
   }
   
-  // Not authenticated at all
+  // Not authenticated at all - go to admin login
   if (!isAuthenticated || !moderator) {
-    return <Navigate to="/mod-login" />;
+    return <Navigate to="/admin-login" />;
   }
   
-  // User is authenticated (admin or moderator) - allow access
+  // Authenticated but not admin - don't allow access
+  if (!moderator.isAdmin) {
+    return <Navigate to="/mod-dashboard" />;
+  }
+  
+  // Is admin - allow access
   return children;
 }

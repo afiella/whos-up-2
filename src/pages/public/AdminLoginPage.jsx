@@ -8,15 +8,15 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const { adminLogin, isAuthenticated, moderator } = useAuth();
+  const { adminLogin, isAuthenticated, moderator, loading } = useAuth();
   const navigate = useNavigate();
 
-  // If already authenticated as admin, redirect to dashboard
+  // Only redirect if we're sure the user is an admin
   useEffect(() => {
-    if (isAuthenticated && moderator?.isAdmin) {
+    if (!loading && isAuthenticated && moderator?.isAdmin === true) {
       navigate('/admin-dashboard');
     }
-  }, [isAuthenticated, moderator, navigate]);
+  }, [loading, isAuthenticated, moderator, navigate]);
 
   // Styling
   const container = css`
@@ -139,7 +139,7 @@ export default function AdminLoginPage() {
       
       if (success) {
         // Navigation will be handled by useEffect
-        console.log('Login successful');
+        console.log('Admin login successful');
       } else {
         setError('Invalid admin password');
         setIsLoggingIn(false);
@@ -154,11 +154,19 @@ export default function AdminLoginPage() {
   const handlePasswordChange = (e) => {
     const value = e.target.value;
     setPassword(value);
-    // Clear error when user starts typing
-    if (error) {
-      setError('');
-    }
+    if (error) setError('');
   };
+
+  // Don't render if we're still loading auth state
+  if (loading) {
+    return (
+      <div className={container}>
+        <div style={{ textAlign: 'center', color: '#a47148', fontFamily: 'Poppins, sans-serif' }}>
+          Loading...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={container}>

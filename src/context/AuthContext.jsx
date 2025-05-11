@@ -259,46 +259,46 @@ export function AuthProvider({ children }) {
       // Attempt to sign in with admin credentials
       try {
         console.log('Signing in with admin email and password...');
-        await signInWithEmailAndPassword(auth, adminEmail, password);
+        const userCredential = await signInWithEmailAndPassword(auth, adminEmail, password);
         console.log('Admin login successful!');
         
         // Get admin data from Firestore
         const adminDoc = await getDoc(doc(db, 'admin', 'admin'));
+        let adminData = {
+          email: adminEmail,
+          username: 'admin',
+          displayName: 'Admin',
+          isAdmin: true,
+          isModerator: true,
+          assignedRoom: null
+        };
+        
         if (adminDoc.exists()) {
-          const adminData = adminDoc.data();
-          // Explicitly set the authenticated state
-          setIsAuthenticated(true);
-          setModerator({
-            email: adminEmail,
-            username: adminData.username || 'admin',
-            displayName: adminData.displayName || 'Admin',
-            isAdmin: true,
-            isModerator: true,
-            assignedRoom: null // Admin has access to all rooms
-          });
-        } else {
-          // If admin doc doesn't exist, still set basic admin info
-          setIsAuthenticated(true);
-          setModerator({
-            email: adminEmail,
-            username: 'admin',
-            displayName: 'Admin',
-            isAdmin: true,
-            isModerator: true,
-            assignedRoom: null // Admin has access to all rooms
-          });
+          const docData = adminDoc.data();
+          adminData = {
+            ...adminData,
+            username: docData.username || 'admin',
+            displayName: docData.displayName || 'Admin',
+          };
         }
+        
+        // Set state in a single update
+        setModerator(adminData);
+        setIsAuthenticated(true);
+        setLoading(false);
         
         return true;
       } catch (signInError) {
         console.error('Admin sign-in error:', signInError);
+        setIsAuthenticated(false);
+        setModerator(null);
+        setLoading(false);
         return false;
       }
     } catch (error) {
       console.error('Admin login error:', error);
-      return false;
-    } finally {
       setLoading(false);
+      return false;
     }
   };
 
