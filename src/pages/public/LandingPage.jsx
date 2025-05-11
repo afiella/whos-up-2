@@ -78,19 +78,13 @@ export default function LandingPage() {
     }
   `;
 
-  const accessLinks = css`
-    display: flex;
-    justify-content: center;
-    gap: 1.5rem;
-    margin-top: 1rem;
-  `;
-
   const accessLink = css`
     color: #a47148;
     font-family: Poppins, sans-serif;
     font-size: 0.875rem;
     text-decoration: none;
     cursor: pointer;
+    margin-top: 1rem;
 
     &:hover {
       text-decoration: underline;
@@ -121,14 +115,9 @@ export default function LandingPage() {
           />
         </div>
         
-        {/* Access links for admin/moderator */}
-        <div className={accessLinks}>
-          <div className={accessLink} onClick={() => nav('/mod-login')}>
-            Moderator Access
-          </div>
-          <div className={accessLink} onClick={() => nav('/admin-login')}>
-            Admin Access
-          </div>
+        {/* Single access link for staff */}
+        <div className={accessLink} onClick={() => nav('/staff-login')}>
+          Staff Access
         </div>
       </div>
     </div>
