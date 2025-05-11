@@ -9,6 +9,7 @@ import ModeratorBadge from '../ui/ModeratorBadge';
 import QueueDisplay from './QueueDisplay';
 import ModeratorQueueControl from './ModeratorQueueControl';
 import AdminBadge from '../ui/AdminBadge';
+import { requestNotificationPermission, setupForegroundMessageListener, showLocalNotification } from '../../services/NotificationService';
 
 export default function RoomPage({ roomId, roomName }) {
   const location = useLocation();
@@ -26,6 +27,31 @@ export default function RoomPage({ roomId, roomName }) {
   const [loading, setLoading] = useState(true);
   const [playerStatus, setPlayerStatus] = useState('waiting'); // 'inQueue', 'outOfRotation', 'waiting'
   const [queuePosition, setQueuePosition] = useState(-1);
+  
+  // State for notification permission
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [notificationBanner, setNotificationBanner] = useState(true);
+  
+  // Function to request notification permission
+  const requestNotifications = async () => {
+    const granted = await requestNotificationPermission(playerName, roomId);
+    setNotificationsEnabled(granted);
+    if (granted) {
+      setNotificationBanner(false);
+      showLocalNotification('Notifications Enabled', 'You will be notified when it\'s your turn!');
+    }
+  };
+  
+  // Set up foreground message listener
+  useEffect(() => {
+    const handleForegroundMessage = (payload) => {
+      const { title, body } = payload.notification;
+      // Create notification in the UI or alert user
+      showLocalNotification(title, body);
+    };
+    
+    setupForegroundMessageListener(handleForegroundMessage);
+  }, []);
   
   // Check if current time has passed shift end time
   useEffect(() => {
@@ -94,13 +120,21 @@ export default function RoomPage({ roomId, roomName }) {
     const unsubscribe = onSnapshot(roomRef, (doc) => {
       const data = doc.data();
       if (data) {
-        setQueue(data.queue || []);
+        const newQueue = data.queue || [];
+        setQueue(newQueue);
         setOutOfRotationPlayers(data.outOfRotationPlayers || []);
         
         // Determine player's current status
-        if (data.queue?.includes(playerName)) {
+        if (newQueue.includes(playerName)) {
+          const newPosition = newQueue.indexOf(playerName);
           setPlayerStatus('inQueue');
-          setQueuePosition(data.queue.indexOf(playerName));
+          
+          // Check if player is now first in queue
+          if (newPosition === 0 && queuePosition > 0) {
+            showLocalNotification("You're Up Next!", `It's your turn in ${roomName}!`);
+          }
+          
+          setQueuePosition(newPosition);
         } else if (data.outOfRotationPlayers?.includes(playerName)) {
           setPlayerStatus('outOfRotation');
         } else {
@@ -111,7 +145,7 @@ export default function RoomPage({ roomId, roomName }) {
     });
     
     return () => unsubscribe();
-  }, [roomId, playerName, navigate]);
+  }, [roomId, playerName, navigate, roomName, queuePosition]);
   
   // Handle joining the queue
   const handleJoinQueue = async () => {
@@ -311,6 +345,31 @@ export default function RoomPage({ roomId, roomName }) {
     }
   `;
   
+  // Notification banner style
+  const notificationBannerStyle = css`
+    background-color: #a47148;
+    color: white;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  `;
+  
+  const bannerButton = css`
+    background-color: white;
+    color: #a47148;
+    border: none;
+    border-radius: 1rem;
+    padding: 0.5rem 1rem;
+    font-family: Poppins, sans-serif;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+  `;
+  
   if (loading) {
     return (
       <div className={container}>
@@ -329,6 +388,16 @@ export default function RoomPage({ roomId, roomName }) {
           {moderator && <ModeratorBadge />}
         </div>
       </div>
+      
+      {/* Notification Permission Banner */}
+      {notificationBanner && !notificationsEnabled && (
+        <div className={notificationBannerStyle}>
+          <span>Enable notifications to get alerted when it's your turn!</span>
+          <button className={bannerButton} onClick={requestNotifications}>
+            Enable
+          </button>
+        </div>
+      )}
       
       {/* Queue Display */}
       <div className={card}>
