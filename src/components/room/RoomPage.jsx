@@ -9,7 +9,7 @@ import ModeratorBadge from '../ui/ModeratorBadge';
 import QueueDisplay from './QueueDisplay';
 import ModeratorQueueControl from './ModeratorQueueControl';
 import AdminBadge from '../ui/AdminBadge';
-import { requestNotificationPermission, setupForegroundMessageListener, showLocalNotification } from '../../services/NotificationService';
+import { requestNotificationPermission, showLocalNotification } from '../../services/NotificationService';
 
 export default function RoomPage({ roomId, roomName }) {
   const location = useLocation();
@@ -29,8 +29,12 @@ export default function RoomPage({ roomId, roomName }) {
   const [queuePosition, setQueuePosition] = useState(-1);
   
   // State for notification permission
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const [notificationBanner, setNotificationBanner] = useState(true);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(
+    localStorage.getItem('notificationsEnabled') === 'true'
+  );
+  const [notificationBanner, setNotificationBanner] = useState(
+    !notificationsEnabled
+  );
   
   // Function to request notification permission
   const requestNotifications = async () => {
@@ -38,20 +42,10 @@ export default function RoomPage({ roomId, roomName }) {
     setNotificationsEnabled(granted);
     if (granted) {
       setNotificationBanner(false);
+      localStorage.setItem('notificationsEnabled', 'true');
       showLocalNotification('Notifications Enabled', 'You will be notified when it\'s your turn!');
     }
   };
-  
-  // Set up foreground message listener
-  useEffect(() => {
-    const handleForegroundMessage = (payload) => {
-      const { title, body } = payload.notification;
-      // Create notification in the UI or alert user
-      showLocalNotification(title, body);
-    };
-    
-    setupForegroundMessageListener(handleForegroundMessage);
-  }, []);
   
   // Check if current time has passed shift end time
   useEffect(() => {
@@ -121,19 +115,24 @@ export default function RoomPage({ roomId, roomName }) {
       const data = doc.data();
       if (data) {
         const newQueue = data.queue || [];
+        const prevQueue = queue; // Store previous queue
+        
         setQueue(newQueue);
         setOutOfRotationPlayers(data.outOfRotationPlayers || []);
         
         // Determine player's current status
         if (newQueue.includes(playerName)) {
           const newPosition = newQueue.indexOf(playerName);
-          setPlayerStatus('inQueue');
           
           // Check if player is now first in queue
           if (newPosition === 0 && queuePosition > 0) {
-            showLocalNotification("You're Up Next!", `It's your turn in ${roomName}!`);
+            // Only show notification if notifications are enabled
+            if (notificationsEnabled) {
+              showLocalNotification("You're Up Next!", `It's your turn in ${roomName}!`);
+            }
           }
           
+          setPlayerStatus('inQueue');
           setQueuePosition(newPosition);
         } else if (data.outOfRotationPlayers?.includes(playerName)) {
           setPlayerStatus('outOfRotation');
@@ -145,7 +144,7 @@ export default function RoomPage({ roomId, roomName }) {
     });
     
     return () => unsubscribe();
-  }, [roomId, playerName, navigate, roomName, queuePosition]);
+  }, [roomId, playerName, navigate, roomName, queue, queuePosition, notificationsEnabled]);
   
   // Handle joining the queue
   const handleJoinQueue = async () => {

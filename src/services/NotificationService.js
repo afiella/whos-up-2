@@ -1,8 +1,7 @@
 // src/services/NotificationService.js
 import { initializeApp } from 'firebase/app';
 import { getMessaging, getToken, onMessage } from 'firebase/messaging';
-import { collection, doc, updateDoc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { getFirestore, collection, doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -18,6 +17,7 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
+const db = getFirestore(app);
 
 // Collection name for player tokens
 const PLAYER_TOKENS_COLLECTION = 'playerTokens';
@@ -40,72 +40,27 @@ export const requestNotificationPermission = async (playerName, roomId) => {
     
     console.log('Notification permission granted');
     
-    try {
-      // Get FCM token
-      const currentToken = await getToken(messaging, {
-        vapidKey: 'BJ2ZCGgAO2qpLxYx_cQpQ4WKd8h8rqFWOWMtRxs_AuX6VjhubAxZnGkZFffB-nfjUXDMlw5vP8D96tQ4YQ0-tA8' // Replace with your VAPID key
-      });
-      
-      if (currentToken) {
-        console.log('Token obtained:', currentToken);
-        
-        // Save token to Firestore with player name and room ID
-        await saveTokenToFirestore(currentToken, playerName, roomId);
-        return true;
-      } else {
-        console.log('No registration token available');
-        return false;
-      }
-    } catch (error) {
-      console.error('An error occurred while retrieving token:', error);
-      return false;
-    }
+    // We'll just store this in local storage for now
+    localStorage.setItem('notificationsEnabled', 'true');
+    
+    return true;
   } catch (error) {
     console.error('Failed to request notification permission:', error);
     return false;
   }
 };
 
-// Save token to Firestore
-const saveTokenToFirestore = async (token, playerName, roomId) => {
-  try {
-    const playerTokenRef = doc(db, PLAYER_TOKENS_COLLECTION, playerName);
-    
-    // Check if document already exists
-    const docSnap = await getDoc(playerTokenRef);
-    
-    if (docSnap.exists()) {
-      // Update existing document
-      await updateDoc(playerTokenRef, {
-        token: token,
-        roomId: roomId,
-        updatedAt: new Date().toISOString()
-      });
-    } else {
-      // Create new document
-      await setDoc(playerTokenRef, {
-        token: token,
-        playerName: playerName,
-        roomId: roomId,
-        createdAt: new Date().toISOString()
-      });
-    }
-    
-    console.log('Token saved to Firestore for player:', playerName);
-  } catch (error) {
-    console.error('Error saving token to Firestore:', error);
-  }
-};
-
 // Set up foreground message listener
 export const setupForegroundMessageListener = (callback) => {
-  onMessage(messaging, (payload) => {
-    console.log('Foreground message received:', payload);
-    callback(payload);
-  });
+  // Simple listener for demonstration purposes
+  console.log('Notification listener set up');
+  
+  // This is normally where we'd set up the Firebase onMessage handler,
+  // but for simplicity we'll just register it for the notification
+  // but the actual notification will be triggered by our queue position check
 };
 
-// Function to show notification manually (for testing)
+// Function to show notification manually (used directly in RoomPage)
 export const showLocalNotification = (title, body) => {
   if (!('Notification' in window)) {
     console.log('This browser does not support notifications');
@@ -119,5 +74,7 @@ export const showLocalNotification = (title, body) => {
     });
   } else {
     console.log('Notification permission not granted');
+    // Try to request permission again for next time
+    Notification.requestPermission();
   }
 };
