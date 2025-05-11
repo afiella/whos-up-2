@@ -1,5 +1,5 @@
 // src/pages/public/AdminLoginPage.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { css } from '@emotion/css';
 import { useAuth } from '../../context/AuthContext';
@@ -8,15 +8,19 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   const { adminLogin, isAuthenticated, moderator, loading } = useAuth();
   const navigate = useNavigate();
+  const hasNavigated = useRef(false);
 
-  // Only redirect if we're sure the user is an admin
+  // Only redirect once when conditions are met
   useEffect(() => {
-    if (!loading && isAuthenticated && moderator?.isAdmin === true) {
-      navigate('/admin-dashboard');
+    if (!loading && isAuthenticated && moderator?.isAdmin && !hasNavigated.current && !isNavigating) {
+      hasNavigated.current = true;
+      setIsNavigating(true);
+      navigate('/admin-dashboard', { replace: true });
     }
-  }, [loading, isAuthenticated, moderator, navigate]);
+  }, [loading, isAuthenticated, moderator, navigate, isNavigating]);
 
   // Styling
   const container = css`
@@ -138,8 +142,9 @@ export default function AdminLoginPage() {
       const success = await adminLogin(password);
       
       if (success) {
+        // Set navigating state to prevent multiple navigations
+        setIsNavigating(true);
         // Navigation will be handled by useEffect
-        console.log('Admin login successful');
       } else {
         setError('Invalid admin password');
         setIsLoggingIn(false);
@@ -157,12 +162,12 @@ export default function AdminLoginPage() {
     if (error) setError('');
   };
 
-  // Don't render if we're still loading auth state
-  if (loading) {
+  // Show loading or navigating state
+  if (loading || isNavigating) {
     return (
       <div className={container}>
         <div style={{ textAlign: 'center', color: '#a47148', fontFamily: 'Poppins, sans-serif' }}>
-          Loading...
+          {isNavigating ? 'Redirecting to dashboard...' : 'Loading...'}
         </div>
       </div>
     );

@@ -249,14 +249,11 @@ export function AuthProvider({ children }) {
   // Admin login with master password
   const adminLogin = async (password) => {
     try {
-      setLoading(true);
-      
-      // Use the admin email directly
+      // Don't set loading here to prevent re-renders
       const adminEmail = 'ellabellosei@gmail.com';
       
       console.log('Attempting admin login with email:', adminEmail);
       
-      // Attempt to sign in with admin credentials
       try {
         console.log('Signing in with admin email and password...');
         const userCredential = await signInWithEmailAndPassword(auth, adminEmail, password);
@@ -282,22 +279,22 @@ export function AuthProvider({ children }) {
           };
         }
         
-        // Set state in a single update
+        // Batch state updates to prevent multiple renders
         setModerator(adminData);
         setIsAuthenticated(true);
-        setLoading(false);
+        
+        // Wait for state to settle
+        await new Promise(resolve => setTimeout(resolve, 100));
         
         return true;
       } catch (signInError) {
         console.error('Admin sign-in error:', signInError);
         setIsAuthenticated(false);
         setModerator(null);
-        setLoading(false);
         return false;
       }
     } catch (error) {
       console.error('Admin login error:', error);
-      setLoading(false);
       return false;
     }
   };

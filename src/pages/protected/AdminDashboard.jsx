@@ -10,6 +10,24 @@ export default function AdminDashboard() {
   const { moderator, logout, registerModerator, fetchModerators, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   
+// Prevent rendering until component is mounted and auth is loaded
+useEffect(() => {
+    if (!authLoading) {
+      setMounted(true);
+    }
+  }, [authLoading]);
+  
+  // Redirect if not admin
+  useEffect(() => {
+    if (mounted && !authLoading) {
+      if (!moderator) {
+        navigate('/admin-login', { replace: true });
+      } else if (!moderator.isAdmin) {
+        navigate('/mod-dashboard', { replace: true });
+      }
+    }
+  }, [mounted, authLoading, moderator, navigate]);
+
   // State for all rooms data
   const [roomsData, setRoomsData] = useState({
     bh: { queue: [], busyPlayers: [], outOfRotationPlayers: [] },
