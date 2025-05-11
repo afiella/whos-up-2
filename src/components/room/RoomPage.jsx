@@ -9,7 +9,7 @@ import ModeratorBadge from '../ui/ModeratorBadge';
 import QueueDisplay from './QueueDisplay';
 import ModeratorQueueControl from './ModeratorQueueControl';
 import AdminBadge from '../ui/AdminBadge';
-import { requestNotificationPermission, showLocalNotification } from '../../services/NotificationService';
+import { requestNotificationPermission, areNotificationsEnabled, showNotification } from '../../utils/notifications';
 
 export default function RoomPage({ roomId, roomName }) {
   const location = useLocation();
@@ -29,21 +29,16 @@ export default function RoomPage({ roomId, roomName }) {
   const [queuePosition, setQueuePosition] = useState(-1);
   
   // State for notification permission
-  const [notificationsEnabled, setNotificationsEnabled] = useState(
-    localStorage.getItem('notificationsEnabled') === 'true'
-  );
-  const [notificationBanner, setNotificationBanner] = useState(
-    !notificationsEnabled
-  );
+  const [notificationsEnabled, setNotificationsEnabled] = useState(areNotificationsEnabled());
+  const [notificationBanner, setNotificationBanner] = useState(!areNotificationsEnabled());
   
   // Function to request notification permission
-  const requestNotifications = async () => {
-    const granted = await requestNotificationPermission(playerName, roomId);
+  const handleRequestNotifications = async () => {
+    const granted = await requestNotificationPermission();
     setNotificationsEnabled(granted);
     if (granted) {
       setNotificationBanner(false);
-      localStorage.setItem('notificationsEnabled', 'true');
-      showLocalNotification('Notifications Enabled', 'You will be notified when it\'s your turn!');
+      showNotification('Notifications Enabled', 'You will be notified when it\'s your turn!');
     }
   };
   
@@ -115,36 +110,46 @@ export default function RoomPage({ roomId, roomName }) {
       const data = doc.data();
       if (data) {
         const newQueue = data.queue || [];
-        const prevQueue = queue; // Store previous queue
         
+        // Determine player's current status before updating the queue
+        const oldPosition = queuePosition;
+        
+        // Update state with new data
         setQueue(newQueue);
         setOutOfRotationPlayers(data.outOfRotationPlayers || []);
         
-        // Determine player's current status
+        // Check player's position in queue
         if (newQueue.includes(playerName)) {
           const newPosition = newQueue.indexOf(playerName);
-          
-          // Check if player is now first in queue
-          if (newPosition === 0 && queuePosition > 0) {
-            // Only show notification if notifications are enabled
-            if (notificationsEnabled) {
-              showLocalNotification("You're Up Next!", `It's your turn in ${roomName}!`);
-            }
-          }
-          
           setPlayerStatus('inQueue');
           setQueuePosition(newPosition);
+          
+          // Check if player is now first in queue (and wasn't before)
+          if (newPosition === 0 && oldPosition > 0) {
+            if (areNotificationsEnabled()) {
+              showNotification(
+                "You're Up Next!", 
+                `It's your turn in ${roomName}!`, 
+                { 
+                  icon: '/logo192.png',
+                  badge: '/logo192.png' 
+                }
+              );
+            }
+          }
         } else if (data.outOfRotationPlayers?.includes(playerName)) {
           setPlayerStatus('outOfRotation');
+          setQueuePosition(-1);
         } else {
           setPlayerStatus('waiting');
+          setQueuePosition(-1);
         }
       }
       setLoading(false);
     });
     
     return () => unsubscribe();
-  }, [roomId, playerName, navigate, roomName, queue, queuePosition, notificationsEnabled]);
+  }, [roomId, playerName, navigate, roomName, queuePosition]);
   
   // Handle joining the queue
   const handleJoinQueue = async () => {
@@ -389,10 +394,10 @@ export default function RoomPage({ roomId, roomName }) {
       </div>
       
       {/* Notification Permission Banner */}
-      {notificationBanner && !notificationsEnabled && (
+      {notificationBanner && (
         <div className={notificationBannerStyle}>
           <span>Enable notifications to get alerted when it's your turn!</span>
-          <button className={bannerButton} onClick={requestNotifications}>
+          <button className={bannerButton} onClick={handleRequestNotifications}>
             Enable
           </button>
         </div>

@@ -1,80 +1,82 @@
-// src/services/NotificationService.js
-import { initializeApp } from 'firebase/app';
-import { getMessaging, getToken, onMessage } from 'firebase/messaging';
-import { getFirestore, collection, doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
+// src/utils/notifications.js
 
-// Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyDVFT58TjZYb9j9QN6395XlRiYI7ltYWZM",
-  authDomain: "whos-up-react.firebaseapp.com",
-  projectId: "whos-up-react",
-  storageBucket: "whos-up-react.firebasestorage.app",
-  messagingSenderId: "62340094431",
-  appId: "1:62340094431:web:025a9ee260308bc8674c6a",
-  measurementId: "G-GVN0VB5TNY"
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const messaging = getMessaging(app);
-const db = getFirestore(app);
-
-// Collection name for player tokens
-const PLAYER_TOKENS_COLLECTION = 'playerTokens';
-
-// Function to request notification permission and get token
-export const requestNotificationPermission = async (playerName, roomId) => {
-  try {
-    // Check if notification permission is granted
+/**
+ * Request notification permission from the user
+ * @returns {Promise<boolean>} - Whether permission was granted
+ */
+export const requestNotificationPermission = async () => {
+    // Check if browser supports notifications
     if (!('Notification' in window)) {
       console.log('This browser does not support notifications');
       return false;
     }
     
-    // Request permission
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-      console.log('Notification permission denied');
-      return false;
+    // If permission is already granted
+    if (Notification.permission === 'granted') {
+      localStorage.setItem('notificationsEnabled', 'true');
+      return true;
     }
     
-    console.log('Notification permission granted');
-    
-    // We'll just store this in local storage for now
-    localStorage.setItem('notificationsEnabled', 'true');
-    
-    return true;
-  } catch (error) {
-    console.error('Failed to request notification permission:', error);
-    return false;
-  }
-};
-
-// Set up foreground message listener
-export const setupForegroundMessageListener = (callback) => {
-  // Simple listener for demonstration purposes
-  console.log('Notification listener set up');
+    // Otherwise, request permission
+    try {
+      const permission = await Notification.requestPermission();
+      const granted = permission === 'granted';
+      
+      // Store preference in localStorage
+      if (granted) {
+        localStorage.setItem('notificationsEnabled', 'true');
+      }
+      
+      return granted;
+    } catch (error) {
+      console.error('Error requesting notification permission:', error);
+      return false;
+    }
+  };
   
-  // This is normally where we'd set up the Firebase onMessage handler,
-  // but for simplicity we'll just register it for the notification
-  // but the actual notification will be triggered by our queue position check
-};
-
-// Function to show notification manually (used directly in RoomPage)
-export const showLocalNotification = (title, body) => {
-  if (!('Notification' in window)) {
-    console.log('This browser does not support notifications');
-    return;
-  }
+  /**
+   * Check if notifications are enabled
+   * @returns {boolean} - Whether notifications are enabled
+   */
+  export const areNotificationsEnabled = () => {
+    return (
+      ('Notification' in window) &&
+      Notification.permission === 'granted' &&
+      localStorage.getItem('notificationsEnabled') === 'true'
+    );
+  };
   
-  if (Notification.permission === 'granted') {
-    new Notification(title, {
-      body: body,
-      icon: '/logo192.png'
-    });
-  } else {
-    console.log('Notification permission not granted');
-    // Try to request permission again for next time
-    Notification.requestPermission();
-  }
-};
+  /**
+   * Show a notification
+   * @param {string} title - Notification title
+   * @param {string} body - Notification body text
+   * @param {Object} options - Additional notification options
+   * @returns {Notification|null} - The notification object or null
+   */
+  export const showNotification = (title, body, options = {}) => {
+    if (!areNotificationsEnabled()) {
+      console.log('Notifications are not enabled');
+      return null;
+    }
+    
+    try {
+      // Create and show notification with provided options
+      const notification = new Notification(title, {
+        body,
+        icon: '/logo192.png', // Default icon
+        ...options
+      });
+      
+      // Optional: Handle click event
+      notification.onclick = () => {
+        // Focus on window when notification is clicked
+        window.focus();
+        notification.close();
+      };
+      
+      return notification;
+    } catch (error) {
+      console.error('Error showing notification:', error);
+      return null;
+    }
+  };
