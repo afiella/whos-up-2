@@ -260,7 +260,7 @@ export default function ModeratorDashboard() {
                 onClick={() => navigateToRoom(moderator.assignedRoom)}
                 style={{ marginRight: '1rem' }}
               >
-                Enter {getRoomDisplayName(moderator.assignedRoom)} Room
+                Enter {getRoomDisplayName(moderator.assignedRoom)} Room as {moderator.displayName}
               </button>
             </div>
           )
