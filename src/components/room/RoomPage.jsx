@@ -147,6 +147,29 @@ export default function RoomPage({ roomId, roomName }) {
       busyPlayers: arrayRemove(playerName)
     });
   };
+
+  // Handle skipping turn but staying in queue
+  const handleSkipTurn = async () => {
+    const roomRef = doc(db, 'rooms', roomId);
+    const roomData = await getDoc(roomRef);
+    
+    if (roomData.exists()) {
+      const currentQueue = roomData.data().queue || [];
+      
+      // Only proceed if player is in queue
+      if (currentQueue.includes(playerName)) {
+        // Remove player from current position
+        const newQueue = currentQueue.filter(name => name !== playerName);
+        // Add player to the end of queue
+        newQueue.push(playerName);
+        
+        // Update queue in Firestore
+        await updateDoc(roomRef, {
+          queue: newQueue
+        });
+      }
+    }
+  };
   
   // Handle leaving the game completely
   const handleLeaveGame = async () => {
@@ -159,7 +182,7 @@ export default function RoomPage({ roomId, roomName }) {
   };
 
   // Handle queue reordering (moderator only)
-const handleQueueReorder = async (newQueue) => {
+  const handleQueueReorder = async (newQueue) => {
     if (!moderator) return; // Only moderators can reorder
     
     const roomRef = doc(db, 'rooms', roomId);
@@ -169,7 +192,7 @@ const handleQueueReorder = async (newQueue) => {
   };
 
   // Add this helper function inside the RoomPage component
-const isAdmin = (name) => {
+  const isAdmin = (name) => {
     return moderator?.isAdmin && name === moderator.displayName;
   };
   
@@ -183,7 +206,9 @@ const isAdmin = (name) => {
     min-height: 100vh;
     background-color: #fff8f0;
     padding: 2rem;
+    padding-bottom: 6rem; /* Add space for fixed buttons */
     box-sizing: border-box;
+    position: relative; /* For positioning the fixed buttons */
   `;
   
   const header = css`
@@ -248,8 +273,15 @@ const isAdmin = (name) => {
   const buttonGroup = css`
     display: flex;
     gap: 1rem;
-    margin-bottom: 2rem;
     flex-wrap: wrap;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #fff8f0;
+    padding: 1rem;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    justify-content: center;
   `;
   
   const button = css`
@@ -288,13 +320,13 @@ const isAdmin = (name) => {
       }
     }
 
-      &.danger {
-    background-color: #b71c1c;
-    
-    &:hover {
-      background-color: #8e0000;
+    &.danger {
+      background-color: #b71c1c;
+      
+      &:hover {
+        background-color: #8e0000;
+      }
     }
-  }
   `;
   
   if (loading) {
@@ -316,93 +348,106 @@ const isAdmin = (name) => {
         </div>
       </div>
       
-      {/* Action Buttons */}
-<div className={buttonGroup}>
-  <button
-    className={button}
-    onClick={handleJoinQueue}
-    disabled={playerStatus === 'inQueue'}
-  >
-    Join Queue
-  </button>
-  <button
-    className={`${button} secondary`}
-    onClick={handleGoBusy}
-    disabled={playerStatus === 'busy'}
-  >
-    With Customer
-  </button>
-  <button
-    className={`${button} tertiary`}
-    onClick={handleOutOfRotation}
-    disabled={playerStatus === 'outOfRotation'}
-  >
-    Out of Rotation
-  </button>
-  <button
-    className={`${button} danger`}
-    onClick={() => {
-      if (window.confirm('Are you sure you want to leave the game?')) {
-        handleLeaveGame();
-        navigate('/');
-      }
-    }}
-  >
-    Leave Game
-  </button>
-</div>
-      
       {/* Queue Display */}
-<div className={card}>
-  <div className={cardTitle}>Current Queue</div>
-  <QueueDisplay 
-  queue={queue}
-  currentPlayer={playerName}
-  isModerator={isModerator}
-  isAdmin={isAdmin}
-/>
-</div>
+      <div className={card}>
+        <div className={cardTitle}>Current Queue</div>
+        <QueueDisplay 
+          queue={queue}
+          currentPlayer={playerName}
+          isModerator={isModerator}
+          isAdmin={isAdmin}
+        />
+      </div>
 
-{/* Moderator Queue Control */}
-{moderator && queue.length > 0 && (
-  <div className={card}>
-    <ModeratorQueueControl
-      queue={queue}
-      currentPlayer={playerName}
-      isModerator={isModerator}
-      isAdmin={isAdmin}
-      onReorder={handleQueueReorder}
-    />
-  </div>
-)}
+      {/* Moderator Queue Control */}
+      {moderator && queue.length > 0 && (
+        <div className={card}>
+          <ModeratorQueueControl
+            queue={queue}
+            currentPlayer={playerName}
+            isModerator={isModerator}
+            isAdmin={isAdmin}
+            onReorder={handleQueueReorder}
+          />
+        </div>
+      )}
       
-      {/* Update the Busy Players Display */}
-<div className={playerList}>
-  {busyPlayers.map((player) => (
-    <div key={player} className={playerItem}>
-      <div>
-        {player}
-        {player === playerName && ' (You)'}
-        {isAdmin(player) && <AdminBadge />}
-        {isModerator(player) && <ModeratorBadge />}
+      {/* Player Lists */}
+      <div className={card}>
+        <div className={cardTitle}>With Customers ({busyPlayers.length})</div>
+        {busyPlayers.length > 0 ? (
+          <div className={playerList}>
+            {busyPlayers.map((player) => (
+              <div key={player} className={playerItem}>
+                <div>
+                  {player}
+                  {player === playerName && ' (You)'}
+                  {isAdmin(player) && <AdminBadge />}
+                  {isModerator(player) && <ModeratorBadge />}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div>No one is busy with customers</div>
+        )}
       </div>
-    </div>
-  ))}
-</div>
       
-      {/* Update the Out of Rotation Display */}
-<div className={playerList}>
-  {outOfRotationPlayers.map((player) => (
-    <div key={player} className={playerItem}>
-      <div>
-        {player}
-        {player === playerName && ' (You)'}
-        {isAdmin(player) && <AdminBadge />}
-        {isModerator(player) && <ModeratorBadge />}
+      <div className={card}>
+        <div className={cardTitle}>Out of Rotation ({outOfRotationPlayers.length})</div>
+        {outOfRotationPlayers.length > 0 ? (
+          <div className={playerList}>
+            {outOfRotationPlayers.map((player) => (
+              <div key={player} className={playerItem}>
+                <div>
+                  {player}
+                  {player === playerName && ' (You)'}
+                  {isAdmin(player) && <AdminBadge />}
+                  {isModerator(player) && <ModeratorBadge />}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div>No one is out of rotation</div>
+        )}
       </div>
-    </div>
-  ))}
-</div>
+      
+      {/* Action Buttons - Now at bottom of screen */}
+      <div className={buttonGroup}>
+        <button
+          className={button}
+          onClick={handleJoinQueue}
+          disabled={playerStatus === 'inQueue'}
+        >
+          Join Rotation
+        </button>
+        <button
+          className={`${button} secondary`}
+          onClick={handleSkipTurn}
+          disabled={playerStatus !== 'inQueue'}
+        >
+          Skip Me
+        </button>
+        <button
+          className={`${button} tertiary`}
+          onClick={handleOutOfRotation}
+          disabled={playerStatus === 'outOfRotation'}
+        >
+          Out
+        </button>
+        <button
+          className={`${button} danger`}
+          onClick={() => {
+            if (window.confirm('Are you sure you want to leave the game?')) {
+              handleLeaveGame();
+              navigate('/');
+            }
+          }}
+        >
+          Leave
+        </button>
+      </div>
     </div>
   );
 }
