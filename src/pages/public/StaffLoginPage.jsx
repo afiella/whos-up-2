@@ -1,24 +1,28 @@
-// src/pages/public/AdminLoginPage.jsx
+// src/pages/public/StaffLoginPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { css } from '@emotion/css';
 import { useAuth } from '../../context/AuthContext';
 
-export default function AdminLoginPage() {
+export default function StaffLoginPage() {
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const { adminLogin, isAuthenticated, moderator } = useAuth();
+  const { login, isAuthenticated, moderator } = useAuth();
   const navigate = useNavigate();
 
-  // Check if already logged in as admin
+  // Check if already logged in
   useEffect(() => {
-    if (isAuthenticated && moderator?.isAdmin) {
-      navigate('/admin-dashboard', { replace: true });
+    if (isAuthenticated && moderator) {
+      if (moderator.isAdmin) {
+        navigate('/admin-dashboard', { replace: true });
+      } else {
+        navigate('/mod-dashboard', { replace: true });
+      }
     }
   }, [isAuthenticated, moderator, navigate]);
 
-  // Styling is similar to ModeratorLoginPage for consistency
   const container = css`
     display: flex;
     align-items: center;
@@ -34,7 +38,7 @@ export default function AdminLoginPage() {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2.5rem;
+    gap: 2rem;
     width: 100%;
     max-width: 400px;
   `;
@@ -110,7 +114,7 @@ export default function AdminLoginPage() {
     color: #d67b7b;
     font-family: Poppins, sans-serif;
     font-size: 0.875rem;
-    margin-top: 0.5rem;
+    text-align: center;
   `;
 
   const link = css`
@@ -125,28 +129,35 @@ export default function AdminLoginPage() {
     }
   `;
 
+  const note = css`
+    color: #8b7355;
+    font-family: Poppins, sans-serif;
+    font-size: 0.875rem;
+    text-align: center;
+    font-style: italic;
+    margin-top: 1rem;
+  `;
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
     
-    if (!password) {
-      setError('Please enter admin password');
+    if (!username || !password) {
+      setError('Please enter username and password');
       return;
     }
 
     try {
       setIsLoggingIn(true);
-      console.log('Starting admin login...');
+      console.log('Attempting login with username:', username);
       
-      const success = await adminLogin(password);
+      const success = await login(username, password);
       
       if (success) {
-        console.log('Admin login successful, navigating to dashboard...');
-        // Navigate to the admin dashboard
-        navigate('/admin-dashboard', { replace: true });
+        console.log('Login successful');
+        // The navigation will be handled by the useEffect above
       } else {
-        console.log('Admin login failed');
-        setError('Invalid admin password');
+        setError('Invalid username or password');
         setIsLoggingIn(false);
       }
     } catch (error) {
@@ -159,18 +170,29 @@ export default function AdminLoginPage() {
   return (
     <div className={container}>
       <div className={inner}>
-        <div className={title}>Admin Login</div>
+        <div className={title}>Staff Login</div>
         
         <form className={form} onSubmit={handleLogin}>
           <div className={pill}>
             <input
+              type="text"
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className={input}
+              disabled={isLoggingIn}
+              autoFocus
+            />
+          </div>
+          
+          <div className={pill}>
+            <input
               type="password"
-              placeholder="Admin Password"
+              placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className={input}
               disabled={isLoggingIn}
-              autoFocus
             />
           </div>
           
@@ -185,13 +207,12 @@ export default function AdminLoginPage() {
           </button>
         </form>
         
-        <div>
-          <div className={link} onClick={() => navigate('/mod-login')}>
-            Moderator Login
-          </div>
-          <div className={link} onClick={() => navigate('/')}>
-            Back to Home
-          </div>
+        <div className={note}>
+          Enter your admin or moderator credentials
+        </div>
+        
+        <div className={link} onClick={() => navigate('/')}>
+          Back to Home
         </div>
       </div>
     </div>

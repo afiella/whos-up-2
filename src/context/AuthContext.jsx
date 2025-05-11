@@ -123,7 +123,7 @@ export function AuthProvider({ children }) {
     return () => unsubscribe();
   }, []);
 
-  // LOGIN function
+  // UNIFIED LOGIN function for both admin and moderators
   const login = async (username, password) => {
     try {
       setLoading(true);
@@ -162,14 +162,11 @@ export function AuthProvider({ children }) {
               return false;
             }
           }
-        } else {
-          console.log('Not admin, checking moderators collection...');
         }
-      } else {
-        console.log('Admin document not found, checking moderators collection...');
       }
       
       // If not admin, check moderators collection
+      console.log('Not admin, checking moderators collection...');
       const moderatorsRef = collection(db, 'moderators');
       const q = query(moderatorsRef, where('username', '==', username));
       console.log('Querying moderators collection for username:', username);
@@ -217,65 +214,6 @@ export function AuthProvider({ children }) {
       return false;
     } finally {
       setLoading(false);
-    }
-  };
-    
-  // Admin login with master password
-  const adminLogin = async (password) => {
-    try {
-      setLoading(true);
-      const adminEmail = 'ellabellosei@gmail.com';
-      
-      console.log('Attempting admin login with email:', adminEmail);
-      
-      // Sign in with Firebase Auth
-      await signInWithEmailAndPassword(auth, adminEmail, password);
-      console.log('Firebase auth successful!');
-      
-      // Get admin data from Firestore
-      let adminDoc;
-      try {
-        adminDoc = await getDoc(doc(db, 'admin', 'admin'));
-      } catch (docError) {
-        console.log('Could not fetch admin doc:', docError);
-      }
-      
-      let adminData = {
-        email: adminEmail,
-        username: 'admin',
-        displayName: 'Admin',
-        isAdmin: true,
-        isModerator: true,
-        assignedRoom: null
-      };
-      
-      if (adminDoc && adminDoc.exists()) {
-        const docData = adminDoc.data();
-        adminData = {
-          ...adminData,
-          username: docData.username || 'admin',
-          displayName: docData.displayName || 'Admin',
-        };
-      }
-      
-      // Set the states properly
-      setModerator(adminData);
-      setIsAuthenticated(true);
-      
-      console.log('Admin state set:', adminData);
-      console.log('isAuthenticated:', true);
-      
-      // Add a small delay to ensure state is set
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      setLoading(false);
-      return true;
-    } catch (error) {
-      console.error('Admin login error:', error);
-      setIsAuthenticated(false);
-      setModerator(null);
-      setLoading(false);
-      return false;
     }
   };
 
@@ -435,8 +373,7 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider value={{
       isAuthenticated,
       moderator,
-      login,
-      adminLogin,
+      login,  // Now handles both admin and moderator login
       logout,
       registerModerator,
       fetchModerators,

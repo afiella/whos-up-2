@@ -28,13 +28,9 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
     );
   }
   
-  // Not authenticated at all
+  // Not authenticated at all - redirect to staff login
   if (!isAuthenticated || !moderator) {
-    // Redirect to appropriate login page
-    if (adminOnly) {
-      return <Navigate to="/admin-login" state={{ from: location }} replace />;
-    }
-    return <Navigate to="/mod-login" state={{ from: location }} replace />;
+    return <Navigate to="/staff-login" state={{ from: location }} replace />;
   }
   
   // Check if this is an admin-only route and user is not admin
