@@ -1,5 +1,5 @@
 // src/pages/public/AdminLoginPage.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { css } from '@emotion/css';
 import { useAuth } from '../../context/AuthContext';
@@ -8,21 +8,10 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [isNavigating, setIsNavigating] = useState(false);
-  const { adminLogin, isAuthenticated, moderator, loading } = useAuth();
+  const { adminLogin } = useAuth();
   const navigate = useNavigate();
-  const hasNavigated = useRef(false);
 
-  // Only redirect once when conditions are met
-  useEffect(() => {
-    if (!loading && isAuthenticated && moderator?.isAdmin && !hasNavigated.current && !isNavigating) {
-      hasNavigated.current = true;
-      setIsNavigating(true);
-      navigate('/admin-dashboard', { replace: true });
-    }
-  }, [loading, isAuthenticated, moderator, navigate, isNavigating]);
-
-  // Styling
+  // Styling (same as before)
   const container = css`
     display: flex;
     align-items: center;
@@ -62,29 +51,30 @@ export default function AdminLoginPage() {
     width: 100%;
     border-radius: 1.5rem;
     background-color: #eacdca;
-    padding: 0.5rem 1rem;
-    box-sizing: border-box;
+    height: 3rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   `;
 
   const input = css`
-    width: 100%;
+    width: calc(100% - 40px);
+    height: 100%;
     border: none;
     background: transparent;
     font-family: Poppins, sans-serif;
     font-size: 1.125rem;
     text-align: center;
     outline: none;
-    padding: 0.5rem 0;
-    color: #4b3b2b;
+    padding: 0;
+    margin: 0;
+    line-height: 3rem;
     
     &::placeholder {
       text-align: center;
       color: #8b7355;
-    }
-    
-    &:disabled {
-      opacity: 0.7;
-      cursor: not-allowed;
+      line-height: 3rem;
     }
   `;
 
@@ -113,13 +103,14 @@ export default function AdminLoginPage() {
     color: #d67b7b;
     font-family: Poppins, sans-serif;
     font-size: 0.875rem;
-    text-align: center;
+    margin-top: 0.5rem;
   `;
 
   const link = css`
     color: #a47148;
     font-family: Poppins, sans-serif;
     text-decoration: none;
+    margin-top: 1rem;
     cursor: pointer;
     
     &:hover {
@@ -129,49 +120,27 @@ export default function AdminLoginPage() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    
-    if (!password.trim()) {
+    if (!password) {
       setError('Please enter admin password');
       return;
     }
 
     try {
       setIsLoggingIn(true);
-      setError('');
-      
       const success = await adminLogin(password);
       
       if (success) {
-        // Set navigating state to prevent multiple navigations
-        setIsNavigating(true);
-        // Navigation will be handled by useEffect
+        // Navigate to the admin dashboard directly
+        navigate('/admin-dashboard');
       } else {
         setError('Invalid admin password');
         setIsLoggingIn(false);
       }
     } catch (error) {
-      console.error('Login error:', error);
-      setError('Login failed. Please try again.');
+      setError('Login failed: ' + error.message);
       setIsLoggingIn(false);
     }
   };
-
-  const handlePasswordChange = (e) => {
-    const value = e.target.value;
-    setPassword(value);
-    if (error) setError('');
-  };
-
-  // Show loading or navigating state
-  if (loading || isNavigating) {
-    return (
-      <div className={container}>
-        <div style={{ textAlign: 'center', color: '#a47148', fontFamily: 'Poppins, sans-serif' }}>
-          {isNavigating ? 'Redirecting to dashboard...' : 'Loading...'}
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className={container}>
@@ -184,11 +153,9 @@ export default function AdminLoginPage() {
               type="password"
               placeholder="Admin Password"
               value={password}
-              onChange={handlePasswordChange}
+              onChange={(e) => setPassword(e.target.value)}
               className={input}
               disabled={isLoggingIn}
-              autoFocus
-              autoComplete="current-password"
             />
           </div>
           
@@ -197,17 +164,17 @@ export default function AdminLoginPage() {
           <button
             type="submit"
             className={button}
-            disabled={isLoggingIn || !password.trim()}
+            disabled={isLoggingIn}
           >
             {isLoggingIn ? 'Logging in...' : 'Login'}
           </button>
         </form>
         
-        <div style={{ textAlign: 'center' }}>
+        <div>
           <div className={link} onClick={() => navigate('/mod-login')}>
             Moderator Login
           </div>
-          <div className={link} onClick={() => navigate('/')} style={{ marginTop: '0.5rem' }}>
+          <div className={link} onClick={() => navigate('/')}>
             Back to Home
           </div>
         </div>

@@ -246,55 +246,46 @@ export function AuthProvider({ children }) {
     }
   };
     
-  // Admin login with master password
-  const adminLogin = async (password) => {
+ // Admin login with master password - Simplified
+ const adminLogin = async (password) => {
     try {
-      // Don't set loading here to prevent re-renders
       const adminEmail = 'ellabellosei@gmail.com';
       
       console.log('Attempting admin login with email:', adminEmail);
       
-      try {
-        console.log('Signing in with admin email and password...');
-        const userCredential = await signInWithEmailAndPassword(auth, adminEmail, password);
-        console.log('Admin login successful!');
-        
-        // Get admin data from Firestore
-        const adminDoc = await getDoc(doc(db, 'admin', 'admin'));
-        let adminData = {
-          email: adminEmail,
-          username: 'admin',
-          displayName: 'Admin',
-          isAdmin: true,
-          isModerator: true,
-          assignedRoom: null
+      // Sign in with admin credentials
+      await signInWithEmailAndPassword(auth, adminEmail, password);
+      console.log('Admin login successful!');
+      
+      // Get admin data from Firestore
+      const adminDoc = await getDoc(doc(db, 'admin', 'admin'));
+      let adminData = {
+        email: adminEmail,
+        username: 'admin',
+        displayName: 'Admin',
+        isAdmin: true,
+        isModerator: true,
+        assignedRoom: null
+      };
+      
+      if (adminDoc.exists()) {
+        const docData = adminDoc.data();
+        adminData = {
+          ...adminData,
+          username: docData.username || 'admin',
+          displayName: docData.displayName || 'Admin',
         };
-        
-        if (adminDoc.exists()) {
-          const docData = adminDoc.data();
-          adminData = {
-            ...adminData,
-            username: docData.username || 'admin',
-            displayName: docData.displayName || 'Admin',
-          };
-        }
-        
-        // Batch state updates to prevent multiple renders
-        setModerator(adminData);
-        setIsAuthenticated(true);
-        
-        // Wait for state to settle
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        return true;
-      } catch (signInError) {
-        console.error('Admin sign-in error:', signInError);
-        setIsAuthenticated(false);
-        setModerator(null);
-        return false;
       }
+      
+      // Set state
+      setModerator(adminData);
+      setIsAuthenticated(true);
+      
+      return true;
     } catch (error) {
       console.error('Admin login error:', error);
+      setIsAuthenticated(false);
+      setModerator(null);
       return false;
     }
   };

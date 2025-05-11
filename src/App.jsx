@@ -13,9 +13,9 @@ import AshlandPage from './pages/rooms/AshlandPage';
 import { AuthProvider } from './context/AuthContext';
 import { initializeRooms } from './firebase/initializeFirestore';
 import ProtectedRoute from './components/auth/ProtectedRoute';
-import AdminRoute from './components/auth/AdminRoute';
 
 export default function App() {
+  // Initialize Firestore collections on app start
   useEffect(() => {
     initializeRooms();
   }, []);
@@ -30,7 +30,7 @@ export default function App() {
           <Route path="/mod-login" element={<ModeratorLoginPage />} />
           <Route path="/admin-login" element={<AdminLoginPage />} />
           
-          {/* Moderator protected route */}
+          {/* Protected routes */}
           <Route 
             path="/mod-dashboard" 
             element={
@@ -39,14 +39,12 @@ export default function App() {
               </ProtectedRoute>
             } 
           />
-          
-          {/* Admin only route - using special AdminRoute component */}
           <Route 
             path="/admin-dashboard" 
             element={
-              <AdminRoute>
+              <ProtectedRoute adminOnly={true}>
                 <AdminDashboard />
-              </AdminRoute>
+              </ProtectedRoute>
             } 
           />
           

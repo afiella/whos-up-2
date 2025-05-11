@@ -7,36 +7,17 @@ import { db } from '../../firebase/config';
 import { onSnapshot, doc, updateDoc } from 'firebase/firestore';
 
 export default function AdminDashboard() {
-    const { moderator, logout, registerModerator, fetchModerators, loading: authLoading } = useAuth();
-    const navigate = useNavigate();
-    const [mounted, setMounted] = useState(false);
-    
-    // State for all rooms data
-    const [roomsData, setRoomsData] = useState({
-      bh: { queue: [], busyPlayers: [], outOfRotationPlayers: [] },
-      '59': { queue: [], busyPlayers: [], outOfRotationPlayers: [] },
-      ashland: { queue: [], busyPlayers: [], outOfRotationPlayers: [] }
-    });
-    
-    // Prevent rendering until component is mounted and auth is loaded
-    useEffect(() => {
-      if (!authLoading) {
-        setMounted(true);
-      }
-    }, [authLoading]);
-    
-    // Redirect if not admin
-    useEffect(() => {
-      if (mounted && !authLoading) {
-        if (!moderator) {
-          navigate('/admin-login', { replace: true });
-        } else if (!moderator.isAdmin) {
-          navigate('/mod-dashboard', { replace: true });
-        }
-      }
-    }, [mounted, authLoading, moderator, navigate]);
+  const { moderator, logout, registerModerator, fetchModerators } = useAuth();
+  const navigate = useNavigate();
   
-  const [dataLoading, setDataLoading] = useState(true);
+  // State for all rooms data
+  const [roomsData, setRoomsData] = useState({
+    bh: { queue: [], busyPlayers: [], outOfRotationPlayers: [] },
+    '59': { queue: [], busyPlayers: [], outOfRotationPlayers: [] },
+    ashland: { queue: [], busyPlayers: [], outOfRotationPlayers: [] }
+  });
+  
+  const [loading, setLoading] = useState(true);
   const [activeRoom, setActiveRoom] = useState('bh');
   
   // Moderator creation states
@@ -52,24 +33,9 @@ export default function AdminDashboard() {
   
   // List of all moderators
   const [allModerators, setAllModerators] = useState([]);
-  const [moderatorsLoading, setModeratorsLoading] = useState(false);
-  
-  // Check authentication and redirect if needed
-  useEffect(() => {
-    if (!authLoading) {
-      if (!moderator) {
-        navigate('/admin-login');
-      } else if (!moderator.isAdmin) {
-        navigate('/mod-dashboard');
-      }
-    }
-  }, [moderator, authLoading, navigate]);
   
   // Listen to all rooms in real-time
   useEffect(() => {
-    if (!moderator?.isAdmin || authLoading) return;
-
-    setDataLoading(true);
     const unsubscribes = [];
     
     // Subscribe to each room
@@ -87,64 +53,35 @@ export default function AdminDashboard() {
             }
           }));
         }
-      }, (error) => {
-        console.error(`Error listening to room ${roomId}:`, error);
       });
       unsubscribes.push(unsubscribe);
     });
     
-    // Set loading to false after a short delay to ensure smooth transition
-    setTimeout(() => {
-      setDataLoading(false);
-    }, 500);
+    setLoading(false);
     
     // Cleanup subscriptions
     return () => {
       unsubscribes.forEach(unsubscribe => unsubscribe());
     };
-  }, [moderator, authLoading]);
+  }, []);
   
   // Load all moderators
   useEffect(() => {
     const loadModerators = async () => {
-      if (moderator?.isAdmin && !authLoading) {
-        setModeratorsLoading(true);
-        try {
-          const moderatorsList = await fetchModerators();
-          setAllModerators(moderatorsList);
-        } catch (error) {
-          console.error('Error loading moderators:', error);
-        } finally {
-          setModeratorsLoading(false);
-        }
+      if (moderator?.isAdmin) {
+        const moderatorsList = await fetchModerators();
+        setAllModerators(moderatorsList);
       }
     };
     loadModerators();
-  }, [moderator, fetchModerators, authLoading]);
+  }, [moderator, fetchModerators]);
   
-  // All your styles remain the same...
+  // Styles
   const container = css`
     min-height: 100vh;
     background-color: #fff8f0;
     padding: 2rem;
     box-sizing: border-box;
-    transition: opacity 0.3s ease;
-  `;
-  
-  const loadingOverlay = css`
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #fff8f0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    font-family: Poppins, sans-serif;
-    font-size: 1.25rem;
-    color: #a47148;
   `;
   
   const header = css`
@@ -348,6 +285,7 @@ export default function AdminDashboard() {
     }
   `;
   
+  // New styles for moderator management
   const moderatorSection = css`
     background-color: white;
     border-radius: 1rem;
@@ -492,6 +430,7 @@ export default function AdminDashboard() {
     }
     
     try {
+      // Generate a unique email for each moderator
       const uniqueEmail = `${newModeratorData.username}@whosup-${newModeratorData.assignedRoom}.com`;
       
       const result = await registerModerator({
@@ -504,6 +443,7 @@ export default function AdminDashboard() {
         setModeratorMessage(`${newModeratorData.displayName} added as ${getRoomDisplayName(newModeratorData.assignedRoom)} moderator!`);
         setModeratorMessageType('success');
         
+        // Reset form
         setNewModeratorData({
           username: '',
           password: '',
@@ -511,6 +451,7 @@ export default function AdminDashboard() {
           assignedRoom: 'bh'
         });
         
+        // Refresh moderator list
         const updatedModerators = await fetchModerators();
         setAllModerators(updatedModerators);
       } else {
@@ -523,25 +464,14 @@ export default function AdminDashboard() {
     }
   };
   
-  // Show loading state while checking auth or loading data
-  if (authLoading || dataLoading) {
+  if (loading) {
     return (
-      <div className={loadingOverlay}>
-        <div>
-          <div style={{ marginBottom: '1rem', textAlign: 'center' }}>
-            Loading Admin Dashboard...
-          </div>
-          <div style={{ fontSize: '2rem', textAlign: 'center' }}>
-            👑
-          </div>
+      <div className={container}>
+        <div style={{ textAlign: 'center', padding: '2rem' }}>
+          Loading dashboard...
         </div>
       </div>
     );
-  }
-  
-  // If not admin, don't render dashboard
-  if (!moderator?.isAdmin) {
-    return null;
   }
   
   return (
@@ -662,9 +592,7 @@ export default function AdminDashboard() {
           </h3>
           
           <div className={moderatorList}>
-            {moderatorsLoading ? (
-              <div className={emptyState}>Loading moderators...</div>
-            ) : allModerators.map((mod) => (
+            {allModerators.map((mod) => (
               <div key={mod.id} className={moderatorCard}>
                 <div className={moderatorName}>{mod.displayName}</div>
                 <div className={moderatorInfo}>Username: {mod.username}</div>
