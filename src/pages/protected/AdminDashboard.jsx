@@ -7,33 +7,34 @@ import { db } from '../../firebase/config';
 import { onSnapshot, doc, updateDoc } from 'firebase/firestore';
 
 export default function AdminDashboard() {
-  const { moderator, logout, registerModerator, fetchModerators, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
-  
-// Prevent rendering until component is mounted and auth is loaded
-useEffect(() => {
-    if (!authLoading) {
-      setMounted(true);
-    }
-  }, [authLoading]);
-  
-  // Redirect if not admin
-  useEffect(() => {
-    if (mounted && !authLoading) {
-      if (!moderator) {
-        navigate('/admin-login', { replace: true });
-      } else if (!moderator.isAdmin) {
-        navigate('/mod-dashboard', { replace: true });
+    const { moderator, logout, registerModerator, fetchModerators, loading: authLoading } = useAuth();
+    const navigate = useNavigate();
+    const [mounted, setMounted] = useState(false);
+    
+    // State for all rooms data
+    const [roomsData, setRoomsData] = useState({
+      bh: { queue: [], busyPlayers: [], outOfRotationPlayers: [] },
+      '59': { queue: [], busyPlayers: [], outOfRotationPlayers: [] },
+      ashland: { queue: [], busyPlayers: [], outOfRotationPlayers: [] }
+    });
+    
+    // Prevent rendering until component is mounted and auth is loaded
+    useEffect(() => {
+      if (!authLoading) {
+        setMounted(true);
       }
-    }
-  }, [mounted, authLoading, moderator, navigate]);
-
-  // State for all rooms data
-  const [roomsData, setRoomsData] = useState({
-    bh: { queue: [], busyPlayers: [], outOfRotationPlayers: [] },
-    '59': { queue: [], busyPlayers: [], outOfRotationPlayers: [] },
-    ashland: { queue: [], busyPlayers: [], outOfRotationPlayers: [] }
-  });
+    }, [authLoading]);
+    
+    // Redirect if not admin
+    useEffect(() => {
+      if (mounted && !authLoading) {
+        if (!moderator) {
+          navigate('/admin-login', { replace: true });
+        } else if (!moderator.isAdmin) {
+          navigate('/mod-dashboard', { replace: true });
+        }
+      }
+    }, [mounted, authLoading, moderator, navigate]);
   
   const [dataLoading, setDataLoading] = useState(true);
   const [activeRoom, setActiveRoom] = useState('bh');
