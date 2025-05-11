@@ -3,7 +3,8 @@ import React, { useEffect } from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import LandingPage from './pages/public/LandingPage';
 import RoomSelectPage from './pages/public/RoomSelectPage';
-import StaffLoginPage from './pages/public/StaffLoginPage';
+import AdminLoginPage from './pages/public/AdminLoginPage';
+import ModeratorLoginPage from './pages/public/ModeratorLoginPage';
 import ModeratorDashboard from './pages/protected/ModeratorDashboard';
 import AdminDashboard from './pages/protected/AdminDashboard';
 import BHPage from './pages/rooms/BHPage';
@@ -26,7 +27,8 @@ export default function App() {
           {/* Public routes */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/select" element={<RoomSelectPage />} />
-          <Route path="/staff-login" element={<StaffLoginPage />} />
+          <Route path="/admin-login" element={<AdminLoginPage />} />
+          <Route path="/mod-login" element={<ModeratorLoginPage />} />
           
           {/* Protected routes */}
           <Route 

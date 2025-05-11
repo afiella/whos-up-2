@@ -1,27 +1,15 @@
-// src/pages/public/StaffLoginPage.jsx
-import React, { useState, useEffect } from 'react';
+// src/pages/public/AdminLoginPage.jsx
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { css } from '@emotion/css';
 import { useAuth } from '../../context/AuthContext';
 
-export default function StaffLoginPage() {
-  const [username, setUsername] = useState('');
+export default function AdminLoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const { login, isAuthenticated, moderator, loading } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
-
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (!loading && isAuthenticated && moderator) {
-      if (moderator.isAdmin) {
-        navigate('/admin-dashboard', { replace: true });
-      } else {
-        navigate('/mod-dashboard', { replace: true });
-      }
-    }
-  }, [isAuthenticated, moderator, loading, navigate]);
 
   const container = css`
     display: flex;
@@ -38,7 +26,7 @@ export default function StaffLoginPage() {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2rem;
+    gap: 2.5rem;
     width: 100%;
     max-width: 400px;
   `;
@@ -135,26 +123,27 @@ export default function StaffLoginPage() {
     font-size: 0.875rem;
     text-align: center;
     font-style: italic;
-    margin-top: 1rem;
+    margin-top: 0.5rem;
   `;
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
     
-    if (!username || !password) {
-      setError('Please enter username and password');
+    if (!password) {
+      setError('Please enter password');
       return;
     }
 
     try {
       setIsLoggingIn(true);
-      const success = await login(username, password);
+      // Always use 'admin' as username for admin login
+      const success = await login('admin', password);
       
       if (success) {
-        // Navigation will be handled by the useEffect above
+        navigate('/admin-dashboard', { replace: true });
       } else {
-        setError('Invalid username or password');
+        setError('Invalid password');
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -164,41 +153,21 @@ export default function StaffLoginPage() {
     }
   };
 
-  // Show loading state while checking auth
-  if (loading) {
-    return (
-      <div className={container}>
-        <div>Loading...</div>
-      </div>
-    );
-  }
-
   return (
     <div className={container}>
       <div className={inner}>
-        <div className={title}>Staff Login</div>
+        <div className={title}>Admin Login</div>
         
         <form className={form} onSubmit={handleLogin}>
           <div className={pill}>
             <input
-              type="text"
-              placeholder="Username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className={input}
-              disabled={isLoggingIn}
-              autoFocus
-            />
-          </div>
-          
-          <div className={pill}>
-            <input
               type="password"
-              placeholder="Password"
+              placeholder="Admin Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className={input}
               disabled={isLoggingIn}
+              autoFocus
             />
           </div>
           
@@ -211,12 +180,15 @@ export default function StaffLoginPage() {
           >
             {isLoggingIn ? 'Logging in...' : 'Login'}
           </button>
+          
+          <div className={note}>
+            Username: admin (pre-filled)
+          </div>
         </form>
         
-        <div className={note}>
-          Enter your admin or moderator credentials
+        <div className={link} onClick={() => navigate('/mod-login')}>
+          Moderator Login
         </div>
-        
         <div className={link} onClick={() => navigate('/')}>
           Back to Home
         </div>
