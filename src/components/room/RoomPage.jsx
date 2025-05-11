@@ -22,10 +22,9 @@ export default function RoomPage({ roomId, roomName }) {
   
   // State for room data
   const [queue, setQueue] = useState([]);
-  const [busyPlayers, setBusyPlayers] = useState([]);
   const [outOfRotationPlayers, setOutOfRotationPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [playerStatus, setPlayerStatus] = useState('waiting'); // 'inQueue', 'busy', 'outOfRotation', 'waiting'
+  const [playerStatus, setPlayerStatus] = useState('waiting'); // 'inQueue', 'outOfRotation', 'waiting'
   const [queuePosition, setQueuePosition] = useState(-1);
   
   // Check if current time has passed shift end time
@@ -83,7 +82,6 @@ export default function RoomPage({ roomId, roomName }) {
       if (!roomSnap.exists()) {
         await updateDoc(roomRef, {
           queue: [],
-          busyPlayers: [],
           outOfRotationPlayers: [],
           lastUpdated: serverTimestamp()
         });
@@ -97,15 +95,12 @@ export default function RoomPage({ roomId, roomName }) {
       const data = doc.data();
       if (data) {
         setQueue(data.queue || []);
-        setBusyPlayers(data.busyPlayers || []);
         setOutOfRotationPlayers(data.outOfRotationPlayers || []);
         
         // Determine player's current status
         if (data.queue?.includes(playerName)) {
           setPlayerStatus('inQueue');
           setQueuePosition(data.queue.indexOf(playerName));
-        } else if (data.busyPlayers?.includes(playerName)) {
-          setPlayerStatus('busy');
         } else if (data.outOfRotationPlayers?.includes(playerName)) {
           setPlayerStatus('outOfRotation');
         } else {
@@ -123,17 +118,6 @@ export default function RoomPage({ roomId, roomName }) {
     const roomRef = doc(db, 'rooms', roomId);
     await updateDoc(roomRef, {
       queue: arrayUnion(playerName),
-      busyPlayers: arrayRemove(playerName),
-      outOfRotationPlayers: arrayRemove(playerName)
-    });
-  };
-  
-  // Handle going busy (with customer)
-  const handleGoBusy = async () => {
-    const roomRef = doc(db, 'rooms', roomId);
-    await updateDoc(roomRef, {
-      busyPlayers: arrayUnion(playerName),
-      queue: arrayRemove(playerName),
       outOfRotationPlayers: arrayRemove(playerName)
     });
   };
@@ -143,8 +127,7 @@ export default function RoomPage({ roomId, roomName }) {
     const roomRef = doc(db, 'rooms', roomId);
     await updateDoc(roomRef, {
       outOfRotationPlayers: arrayUnion(playerName),
-      queue: arrayRemove(playerName),
-      busyPlayers: arrayRemove(playerName)
+      queue: arrayRemove(playerName)
     });
   };
 
@@ -176,7 +159,6 @@ export default function RoomPage({ roomId, roomName }) {
     const roomRef = doc(db, 'rooms', roomId);
     await updateDoc(roomRef, {
       queue: arrayRemove(playerName),
-      busyPlayers: arrayRemove(playerName),
       outOfRotationPlayers: arrayRemove(playerName)
     });
   };
@@ -191,7 +173,7 @@ export default function RoomPage({ roomId, roomName }) {
     });
   };
 
-  // Add this helper function inside the RoomPage component
+  // Helper functions to identify admins and moderators
   const isAdmin = (name) => {
     return moderator?.isAdmin && name === moderator.displayName;
   };
@@ -372,27 +354,7 @@ export default function RoomPage({ roomId, roomName }) {
         </div>
       )}
       
-      {/* Player Lists */}
-      <div className={card}>
-        <div className={cardTitle}>With Customers ({busyPlayers.length})</div>
-        {busyPlayers.length > 0 ? (
-          <div className={playerList}>
-            {busyPlayers.map((player) => (
-              <div key={player} className={playerItem}>
-                <div>
-                  {player}
-                  {player === playerName && ' (You)'}
-                  {isAdmin(player) && <AdminBadge />}
-                  {isModerator(player) && <ModeratorBadge />}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div>No one is busy with customers</div>
-        )}
-      </div>
-      
+      {/* Out of Rotation Players */}
       <div className={card}>
         <div className={cardTitle}>Out of Rotation ({outOfRotationPlayers.length})</div>
         {outOfRotationPlayers.length > 0 ? (
@@ -413,7 +375,7 @@ export default function RoomPage({ roomId, roomName }) {
         )}
       </div>
       
-      {/* Action Buttons - Now at bottom of screen */}
+      {/* Action Buttons - At bottom of screen */}
       <div className={buttonGroup}>
         <button
           className={button}
