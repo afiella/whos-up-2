@@ -21,16 +21,16 @@ export default function AdminLoginPage() {
     });
   }, [isAuthenticated, moderator, loading]);
 
-  // Redirect if already logged in as admin
-  useEffect(() => {
-    console.log('AdminLoginPage - Checking redirect:', {
+ // Redirect if already logged in as admin
+useEffect(() => {
+    console.log('AdminLoginPage - Auth state:', {
       isAuthenticated,
-      isAdmin: moderator?.isAdmin,
-      loading
+      moderator,
+      isAdmin: moderator?.isAdmin
     });
     
     if (isAuthenticated && moderator?.isAdmin) {
-      console.log('AdminLoginPage - Redirecting to admin dashboard');
+      console.log('Should redirect to dashboard...');
       navigate('/admin-dashboard', { replace: true });
     }
   }, [isAuthenticated, moderator, navigate]);

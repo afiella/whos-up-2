@@ -53,38 +53,42 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // Simple admin login - just check password
-  const adminLogin = async (password) => {
-    try {
-      setLoading(true);
+  // Around line 45-80 in your AuthContext.jsx
+const adminLogin = async (password) => {
+  try {
+    setLoading(true);
+    console.log('Admin login attempt with password length:', password.length);
+    
+    // Simple password check
+    if (password === ADMIN_PASSWORD) {
+      console.log('Password correct!');
+      const adminData = {
+        username: 'admin',
+        displayName: 'Administrator',
+        email: 'admin@whosup.com',
+        isAdmin: true,
+        isModerator: true,
+        assignedRoom: null
+      };
       
-      // Simple password check
-      if (password === ADMIN_PASSWORD) {
-        const adminData = {
-          username: 'admin',
-          displayName: 'Administrator',
-          email: 'admin@whosup.com',
-          isAdmin: true,
-          isModerator: true,
-          assignedRoom: null
-        };
-        
-        // Save to state and localStorage
-        setIsAuthenticated(true);
-        setModerator(adminData);
-        localStorage.setItem('whosUpAuth', JSON.stringify(adminData));
-        
-        return true;
-      } else {
-        return false;
-      }
-    } catch (error) {
-      console.error('Admin login error:', error);
+      console.log('Setting auth state...');
+      setIsAuthenticated(true);
+      setModerator(adminData);
+      localStorage.setItem('whosUpAuth', JSON.stringify(adminData));
+      console.log('Auth state set, returning true');
+      
+      return true;
+    } else {
+      console.log('Password incorrect');
       return false;
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (error) {
+    console.error('Admin login error:', error);
+    return false;
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Simple moderator login - check username/password in Firestore
   const login = async (username, password) => {
