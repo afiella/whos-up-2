@@ -58,30 +58,29 @@ export default function AdminLoginPage() {
     width: 100%;
     border-radius: 1.5rem;
     background-color: #eacdca;
-    height: 3rem;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    padding: 0.5rem 1rem;
+    box-sizing: border-box;
   `;
 
   const input = css`
-    width: calc(100% - 40px);
-    height: 100%;
+    width: 100%;
     border: none;
     background: transparent;
     font-family: Poppins, sans-serif;
     font-size: 1.125rem;
     text-align: center;
     outline: none;
-    padding: 0;
-    margin: 0;
-    line-height: 3rem;
+    padding: 0.5rem 0;
+    color: #4b3b2b;
     
     &::placeholder {
       text-align: center;
       color: #8b7355;
-      line-height: 3rem;
+    }
+    
+    &:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
     }
   `;
 
@@ -110,7 +109,6 @@ export default function AdminLoginPage() {
     color: #d67b7b;
     font-family: Poppins, sans-serif;
     font-size: 0.875rem;
-    margin-top: 0.5rem;
     text-align: center;
   `;
 
@@ -118,7 +116,6 @@ export default function AdminLoginPage() {
     color: #a47148;
     font-family: Poppins, sans-serif;
     text-decoration: none;
-    margin-top: 1rem;
     cursor: pointer;
     
     &:hover {
@@ -129,7 +126,7 @@ export default function AdminLoginPage() {
   const handleLogin = async (e) => {
     e.preventDefault();
     
-    if (!password) {
+    if (!password.trim()) {
       setError('Please enter admin password');
       return;
     }
@@ -141,8 +138,8 @@ export default function AdminLoginPage() {
       const success = await adminLogin(password);
       
       if (success) {
-        // Don't navigate immediately - let useEffect handle it
-        console.log('Login successful, waiting for navigation...');
+        // Navigation will be handled by useEffect
+        console.log('Login successful');
       } else {
         setError('Invalid admin password');
         setIsLoggingIn(false);
@@ -151,6 +148,15 @@ export default function AdminLoginPage() {
       console.error('Login error:', error);
       setError('Login failed. Please try again.');
       setIsLoggingIn(false);
+    }
+  };
+
+  const handlePasswordChange = (e) => {
+    const value = e.target.value;
+    setPassword(value);
+    // Clear error when user starts typing
+    if (error) {
+      setError('');
     }
   };
 
@@ -165,10 +171,11 @@ export default function AdminLoginPage() {
               type="password"
               placeholder="Admin Password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={handlePasswordChange}
               className={input}
               disabled={isLoggingIn}
               autoFocus
+              autoComplete="current-password"
             />
           </div>
           
@@ -177,17 +184,17 @@ export default function AdminLoginPage() {
           <button
             type="submit"
             className={button}
-            disabled={isLoggingIn}
+            disabled={isLoggingIn || !password.trim()}
           >
             {isLoggingIn ? 'Logging in...' : 'Login'}
           </button>
         </form>
         
-        <div>
+        <div style={{ textAlign: 'center' }}>
           <div className={link} onClick={() => navigate('/mod-login')}>
             Moderator Login
           </div>
-          <div className={link} onClick={() => navigate('/')}>
+          <div className={link} onClick={() => navigate('/')} style={{ marginTop: '0.5rem' }}>
             Back to Home
           </div>
         </div>
