@@ -394,21 +394,21 @@ export default function RoomPage({ roomId, roomName }) {
         </div>
       </div>
       
-      // Then modify the notification banner code:
-{notificationBanner && (
-  <div className={notificationBannerStyle}>
-    {isIOS() ? (
-      <span>Notifications aren't supported on iOS devices, but you'll still see updates here.</span>
-    ) : (
-      <>
-        <span>Enable notifications to get alerted when it's your turn!</span>
-        <button className={bannerButton} onClick={handleRequestNotifications}>
-          Enable
-        </button>
-      </>
+      {/* Notification Permission Banner */}
+      {notificationBanner && (
+        <div className={notificationBannerStyle}>
+        {isIOS() ? (
+          <span>Notifications aren't supported on iOS devices, but you'll still see updates here.</span>
+        ) : (
+          <>
+            <span>Enable notifications to get alerted when it's your turn!</span>
+            <button className={bannerButton} onClick={handleRequestNotifications}>
+              Enable
+            </button>
+          </>
+        )}
+      </div>
     )}
-  </div>
-)}
       
       {/* Queue Display */}
       <div className={card}>
