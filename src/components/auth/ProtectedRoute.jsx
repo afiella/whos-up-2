@@ -20,10 +20,7 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
         fontSize: '1.25rem',
         color: '#a47148'
       }}>
-        <div style={{ textAlign: 'center' }}>
-          <div>Loading...</div>
-          {adminOnly && <div style={{ marginTop: '0.5rem', fontSize: '1rem' }}>Verifying admin access...</div>}
-        </div>
+        Loading...
       </div>
     );
   }
@@ -33,9 +30,14 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
     return <Navigate to="/staff-login" state={{ from: location }} replace />;
   }
   
-  // Check if this is an admin-only route and user is not admin
-  if (adminOnly && !moderator.isAdmin) {
-    return <Navigate to="/mod-dashboard" state={{ from: location }} replace />;
+  // Admin trying to access moderator dashboard - redirect to admin dashboard
+  if (moderator.isAdmin && location.pathname === '/mod-dashboard') {
+    return <Navigate to="/admin-dashboard" replace />;
+  }
+  
+  // Non-admin trying to access admin dashboard - redirect to moderator dashboard
+  if (!moderator.isAdmin && adminOnly) {
+    return <Navigate to="/mod-dashboard" replace />;
   }
   
   // User is authenticated and has proper permissions
