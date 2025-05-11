@@ -9,19 +9,18 @@ export default function StaffLoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const { login, isAuthenticated, moderator } = useAuth();
+  const { login, logout, isAuthenticated, moderator } = useAuth();
   const navigate = useNavigate();
 
-  // Check if already logged in
+  // Always logout when landing on this page for a fresh start
   useEffect(() => {
-    if (isAuthenticated && moderator) {
-      if (moderator.isAdmin) {
-        navigate('/admin-dashboard', { replace: true });
-      } else {
-        navigate('/mod-dashboard', { replace: true });
+    const ensureFreshStart = async () => {
+      if (isAuthenticated) {
+        await logout();
       }
-    }
-  }, [isAuthenticated, moderator, navigate]);
+    };
+    ensureFreshStart();
+  }, []); // Only run once when component mounts
 
   const container = css`
     display: flex;
@@ -155,7 +154,12 @@ export default function StaffLoginPage() {
       
       if (success) {
         console.log('Login successful');
-        // The navigation will be handled by the useEffect above
+        // Navigate based on user role
+        if (moderator?.isAdmin) {
+          navigate('/admin-dashboard', { replace: true });
+        } else {
+          navigate('/mod-dashboard', { replace: true });
+        }
       } else {
         setError('Invalid username or password');
         setIsLoggingIn(false);
