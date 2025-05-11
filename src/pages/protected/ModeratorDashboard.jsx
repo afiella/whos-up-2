@@ -1,5 +1,5 @@
 // src/pages/protected/ModeratorDashboard.jsx
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { css } from '@emotion/css';
 import { useAuth } from '../../context/AuthContext';
@@ -7,15 +7,8 @@ import AdminBadge from '../../components/ui/AdminBadge';
 import ModeratorBadge from '../../components/ui/ModeratorBadge';
 
 export default function ModeratorDashboard() {
-  const { moderator, logout, isAuthenticated } = useAuth();
+  const { moderator, logout } = useAuth();
   const navigate = useNavigate();
-
-  // Redirect admins to admin dashboard
-  useEffect(() => {
-    if (isAuthenticated && moderator?.isAdmin) {
-      navigate('/admin-dashboard', { replace: true });
-    }
-  }, [isAuthenticated, moderator, navigate]);
 
   // Styles
   const container = css`
@@ -101,6 +94,22 @@ export default function ModeratorDashboard() {
     flex-wrap: wrap;
   `;
 
+  const secondaryButton = css`
+    background-color: #8d9e78;
+    color: white;
+    border: none;
+    border-radius: 1.5rem;
+    padding: 0.5rem 1.25rem;
+    font-family: Poppins, sans-serif;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    
+    &:hover {
+      background-color: #768a62;
+    }
+  `;
+
   const roomBadge = css`
     display: inline-block;
     background-color: #d67b7b;
@@ -152,36 +161,44 @@ export default function ModeratorDashboard() {
       state: {
         name: moderator.displayName || moderator.username,
         shiftEnd: '8:00 PM',
-        shiftType: 'moderator'
+        shiftType: moderator.isAdmin ? 'admin' : 'moderator'
       }
     });
   };
 
-  // Don't render anything if not a moderator
-  if (!moderator || !moderator.isModerator || moderator.isAdmin) {
+  if (!moderator) {
     return null;
   }
 
   return (
     <div className={container}>
       <div className={header}>
-        <h1 className={title}>Moderator Dashboard</h1>
-        <button className={button} onClick={handleLogout}>
-          Logout
-        </button>
+        <h1 className={title}>
+          {moderator.isAdmin ? 'Admin Dashboard' : 'Moderator Dashboard'}
+        </h1>
+        <div className={buttonGroup}>
+          {moderator.isAdmin && (
+            <button className={secondaryButton} onClick={() => navigate('/admin-dashboard')}>
+              Admin Command Center
+            </button>
+          )}
+          <button className={button} onClick={handleLogout}>
+            Logout
+          </button>
+        </div>
       </div>
 
       {/* Welcome Card */}
       <div className={card}>
         <div className={cardTitle}>
           Welcome, {moderator.displayName || moderator.username}!
-          <ModeratorBadge />
+          {moderator.isAdmin ? <AdminBadge /> : <ModeratorBadge />}
         </div>
         
         <div className={infoGrid}>
           <div className={infoItem}>
             <span className={infoLabel}>Role:</span>
-            <span>Moderator</span>
+            <span>{moderator.isAdmin ? 'Administrator' : 'Moderator'}</span>
           </div>
           
           <div className={infoItem}>
@@ -189,7 +206,7 @@ export default function ModeratorDashboard() {
             <span>{moderator.username}</span>
           </div>
           
-          {moderator.assignedRoom && (
+          {moderator.assignedRoom && !moderator.isAdmin && (
             <div className={infoItem}>
               <span className={infoLabel}>Assigned Room:</span>
               <span className={roomBadge}>
@@ -200,7 +217,9 @@ export default function ModeratorDashboard() {
         </div>
         
         <p className={text} style={{ marginTop: '1rem' }}>
-          You are a moderator for the {getRoomDisplayName(moderator.assignedRoom)} room. You can manage the queue and assist players.
+          {moderator.isAdmin 
+            ? 'You have full administrative access to all rooms and can manage moderators.'
+            : `You are a moderator for the ${getRoomDisplayName(moderator.assignedRoom)} room. You can manage the queue and assist players.`}
         </p>
       </div>
 
@@ -208,18 +227,43 @@ export default function ModeratorDashboard() {
       <div className={card}>
         <div className={cardTitle}>Quick Actions</div>
         
-        {moderator.assignedRoom && (
+        {moderator.isAdmin ? (
+          // Admin Quick Actions
           <div>
             <p className={text} style={{ marginBottom: '1rem' }}>
-              Access your assigned room to manage the queue:
+              Access any room or manage the entire system:
             </p>
-            <button 
-              className={button}
-              onClick={() => navigateToRoom(moderator.assignedRoom)}
-            >
-              Enter {getRoomDisplayName(moderator.assignedRoom)} Room
-            </button>
+            <div className={buttonGroup}>
+              <button className={button} onClick={() => navigateToRoom('bh')}>
+                Enter BH Room
+              </button>
+              <button className={button} onClick={() => navigateToRoom('59')}>
+                Enter 59 Room
+              </button>
+              <button className={button} onClick={() => navigateToRoom('ashland')}>
+                Enter Ashland Room
+              </button>
+              <button className={secondaryButton} onClick={() => navigate('/admin-dashboard')}>
+                View All Rooms
+              </button>
+            </div>
           </div>
+        ) : (
+          // Moderator Quick Actions
+          moderator.assignedRoom && (
+            <div>
+              <p className={text} style={{ marginBottom: '1rem' }}>
+                Access your assigned room to manage the queue:
+              </p>
+              <button 
+                className={button}
+                onClick={() => navigateToRoom(moderator.assignedRoom)}
+                style={{ marginRight: '1rem' }}
+              >
+                Enter {getRoomDisplayName(moderator.assignedRoom)} Room
+              </button>
+            </div>
+          )
         )}
       </div>
 
@@ -227,15 +271,68 @@ export default function ModeratorDashboard() {
       <div className={card}>
         <div className={cardTitle}>How to Use</div>
         
-        <div className={text}>
-          <h3 style={{ marginBottom: '0.5rem', color: '#4b3b2b' }}>As a Moderator:</h3>
-          <ul style={{ paddingLeft: '1.5rem', marginTop: '0.5rem' }}>
-            <li>Enter your assigned room to manage the queue</li>
-            <li>Use drag-and-drop to reorder players in the queue</li>
-            <li>Your username appears with a Moderator badge</li>
-            <li>Help players with queue management and issues</li>
-            <li>You can join the queue yourself if needed</li>
-          </ul>
+        {moderator.isAdmin ? (
+          <div className={text}>
+            <h3 style={{ marginBottom: '0.5rem', color: '#4b3b2b' }}>As an Administrator:</h3>
+            <ul style={{ paddingLeft: '1.5rem', marginTop: '0.5rem' }}>
+              <li>Access the Admin Command Center to see all rooms at once</li>
+              <li>Add new moderators and assign them to specific rooms</li>
+              <li>Clear queues or manage players in any room</li>
+              <li>Enter any room to help with queue management</li>
+              <li>Your username appears with a special Admin badge</li>
+            </ul>
+          </div>
+        ) : (
+          <div className={text}>
+            <h3 style={{ marginBottom: '0.5rem', color: '#4b3b2b' }}>As a Moderator:</h3>
+            <ul style={{ paddingLeft: '1.5rem', marginTop: '0.5rem' }}>
+              <li>Enter your assigned room to manage the queue</li>
+              <li>Use drag-and-drop to reorder players in the queue</li>
+              <li>Your username appears with a Moderator badge</li>
+              <li>Help players with queue management and issues</li>
+              <li>You can join the queue yourself if needed</li>
+            </ul>
+          </div>
+        )}
+      </div>
+
+      {/* Status Card */}
+      <div className={card}>
+        <div className={cardTitle}>Your Status</div>
+        <div className={infoGrid}>
+          <div className={actionCard}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>
+                {moderator.isAdmin ? '👑' : '🛡️'}
+              </div>
+              <div style={{ fontWeight: '600', color: '#4b3b2b' }}>
+                {moderator.isAdmin ? 'Administrator' : 'Room Moderator'}
+              </div>
+              {!moderator.isAdmin && moderator.assignedRoom && (
+                <div style={{ marginTop: '0.5rem' }}>
+                  <span className={roomBadge}>
+                    {getRoomDisplayName(moderator.assignedRoom)} Room
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <div className={actionCard}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>
+                {moderator.isAdmin ? '🏢' : '🚪'}
+              </div>
+              <div style={{ fontWeight: '600', color: '#4b3b2b' }}>
+                {moderator.isAdmin ? 'All Rooms Access' : 'Single Room Access'}
+              </div>
+              <div style={{ marginTop: '0.5rem', color: '#6b6b6b' }}>
+                {moderator.isAdmin 
+                  ? 'Can manage all rooms' 
+                  : `Can manage ${getRoomDisplayName(moderator.assignedRoom)}`}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

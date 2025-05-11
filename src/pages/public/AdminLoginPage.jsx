@@ -1,5 +1,5 @@
 // src/pages/public/AdminLoginPage.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { css } from '@emotion/css';
 import { useAuth } from '../../context/AuthContext';
@@ -8,8 +8,15 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const { login } = useAuth();
+  const { login, isAuthenticated, moderator } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect if already logged in as admin
+  useEffect(() => {
+    if (isAuthenticated && moderator?.isAdmin) {
+      navigate('/admin-dashboard', { replace: true });
+    }
+  }, [isAuthenticated, moderator, navigate]);
 
   const container = css`
     display: flex;
@@ -137,11 +144,14 @@ export default function AdminLoginPage() {
 
     try {
       setIsLoggingIn(true);
+      console.log('Attempting admin login...');
+      
       // Always use 'admin' as username for admin login
       const success = await login('admin', password);
       
       if (success) {
-        navigate('/admin-dashboard', { replace: true });
+        console.log('Admin login successful, waiting for state update...');
+        // The useEffect above will handle navigation
       } else {
         setError('Invalid password');
       }

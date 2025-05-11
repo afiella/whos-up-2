@@ -25,18 +25,16 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
     );
   }
   
-  // Not authenticated at all - redirect to staff login
+  // Not authenticated at all - redirect to appropriate login
   if (!isAuthenticated || !moderator) {
-    return <Navigate to="/staff-login" state={{ from: location }} replace />;
+    if (adminOnly) {
+      return <Navigate to="/admin-login" state={{ from: location }} replace />;
+    }
+    return <Navigate to="/mod-login" state={{ from: location }} replace />;
   }
   
-  // Admin trying to access moderator dashboard - redirect to admin dashboard
-  if (moderator.isAdmin && location.pathname === '/mod-dashboard') {
-    return <Navigate to="/admin-dashboard" replace />;
-  }
-  
-  // Non-admin trying to access admin dashboard - redirect to moderator dashboard
-  if (!moderator.isAdmin && adminOnly) {
+  // Check admin access for admin-only routes
+  if (adminOnly && !moderator.isAdmin) {
     return <Navigate to="/mod-dashboard" replace />;
   }
   
