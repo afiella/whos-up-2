@@ -8,12 +8,29 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const { adminLogin, isAuthenticated, moderator } = useAuth(); // Changed from login to adminLogin
+  const { adminLogin, isAuthenticated, moderator, loading } = useAuth();
   const navigate = useNavigate();
+
+  // Debug auth state
+  useEffect(() => {
+    console.log('AdminLoginPage - Auth State:', {
+      isAuthenticated,
+      moderator,
+      loading,
+      isAdmin: moderator?.isAdmin
+    });
+  }, [isAuthenticated, moderator, loading]);
 
   // Redirect if already logged in as admin
   useEffect(() => {
+    console.log('AdminLoginPage - Checking redirect:', {
+      isAuthenticated,
+      isAdmin: moderator?.isAdmin,
+      loading
+    });
+    
     if (isAuthenticated && moderator?.isAdmin) {
+      console.log('AdminLoginPage - Redirecting to admin dashboard');
       navigate('/admin-dashboard', { replace: true });
     }
   }, [isAuthenticated, moderator, navigate]);
@@ -133,6 +150,13 @@ export default function AdminLoginPage() {
     margin-top: 0.5rem;
   `;
 
+  const loadingDiv = css`
+    text-align: center;
+    color: #a47148;
+    font-family: Poppins, sans-serif;
+    font-size: 1.125rem;
+  `;
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
@@ -144,24 +168,36 @@ export default function AdminLoginPage() {
 
     try {
       setIsLoggingIn(true);
-      console.log('Attempting admin login...');
+      console.log('AdminLoginPage - Starting login attempt...');
       
       // Use adminLogin with just the password
-      const success = await adminLogin(password); // Changed to use adminLogin
+      const success = await adminLogin(password);
+      console.log('AdminLoginPage - Login result:', success);
       
       if (success) {
-        console.log('Admin login successful, waiting for state update...');
+        console.log('AdminLoginPage - Login successful, waiting for auth state update...');
         // The useEffect above will handle navigation
       } else {
+        console.log('AdminLoginPage - Login failed');
         setError('Invalid password');
+        setIsLoggingIn(false);
       }
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('AdminLoginPage - Login error:', error);
       setError('Login failed: ' + error.message);
-    } finally {
       setIsLoggingIn(false);
     }
   };
+
+  // Show loading state if auth is still initializing
+  if (loading && !isLoggingIn) {
+    console.log('AdminLoginPage - Showing auth loading state');
+    return (
+      <div className={container}>
+        <div className={loadingDiv}>Checking authentication...</div>
+      </div>
+    );
+  }
 
   return (
     <div className={container}>

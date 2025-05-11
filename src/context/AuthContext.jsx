@@ -46,10 +46,21 @@ export function AuthProvider({ children }) {
   // Loading state for Firebase operations
   const [loading, setLoading] = useState(true);
 
+  // Debug state changes
+  useEffect(() => {
+    console.log('AuthContext State Update:', {
+      isAuthenticated,
+      moderator,
+      loading
+    });
+  }, [isAuthenticated, moderator, loading]);
+
   // Check for existing authentication on initial load
   useEffect(() => {
-    console.log("Checking authentication state...");
+    console.log("Setting up auth state listener...");
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log("Auth state changed. User:", user ? user.email : 'null');
+      
       if (user) {
         console.log("User is signed in:", user.email);
         try {
@@ -60,21 +71,27 @@ export function AuthProvider({ children }) {
           if (adminDoc.exists()) {
             console.log("Admin document found");
             const adminData = adminDoc.data();
+            console.log("Admin data:", adminData);
             
             // Check if this user is the admin
             if (adminData.email === user.email) {
-              console.log("User is admin");
-              setModerator({
+              console.log("User is admin - setting states");
+              
+              const adminUser = {
                 uid: user.uid,
                 email: user.email,
                 username: adminData.username || 'admin',
                 displayName: adminData.displayName || 'Admin',
                 isAdmin: true,
                 isModerator: true,
-                assignedRoom: null // Admin has access to all rooms
-              });
+                assignedRoom: null
+              };
+              
+              setModerator(adminUser);
               setIsAuthenticated(true);
               setLoading(false);
+              
+              console.log("Admin state set:", adminUser);
               return; // Exit early if admin
             }
           }
@@ -89,7 +106,8 @@ export function AuthProvider({ children }) {
             console.log("Moderator document found");
             const moderatorDoc = querySnapshot.docs[0];
             const moderatorData = moderatorDoc.data();
-            setModerator({
+            
+            const moderatorUser = {
               uid: user.uid,
               email: user.email,
               username: moderatorData.username,
@@ -97,8 +115,11 @@ export function AuthProvider({ children }) {
               isAdmin: moderatorData.isAdmin || false,
               isModerator: true,
               assignedRoom: moderatorData.assignedRoom || null
-            });
+            };
+            
+            setModerator(moderatorUser);
             setIsAuthenticated(true);
+            console.log("Moderator state set:", moderatorUser);
           } else {
             console.log("User not found in moderators collection");
             // User exists in Authentication but not in Firestore
@@ -116,6 +137,8 @@ export function AuthProvider({ children }) {
         setIsAuthenticated(false);
         setModerator(null);
       }
+      
+      console.log("Setting loading to false");
       setLoading(false);
     });
     
@@ -126,54 +149,48 @@ export function AuthProvider({ children }) {
   // ADMIN LOGIN function - separate from moderator login
   const adminLogin = async (password) => {
     try {
+      console.log('adminLogin: Starting...');
       setLoading(true);
-      console.log('Attempting admin login...');
       
       // Get admin document from Firestore
       const adminDoc = await getDoc(doc(db, 'admin', 'admin'));
       
       if (!adminDoc.exists()) {
-        console.log('Admin document not found');
+        console.log('adminLogin: Admin document not found');
+        setLoading(false);
         return false;
       }
       
       const adminData = adminDoc.data();
       const adminEmail = adminData.email;
       
-      console.log('Admin document found, email:', adminEmail);
+      console.log('adminLogin: Admin document found:', adminData);
+      console.log('adminLogin: Using email:', adminEmail);
       
       if (!adminEmail) {
-        console.log('Admin email not found in document');
+        console.log('adminLogin: Admin email not found in document');
+        setLoading(false);
         return false;
       }
       
       // Attempt to sign in with admin credentials
       try {
-        console.log('Signing in with admin email and password...');
-        await signInWithEmailAndPassword(auth, adminEmail, password);
-        console.log('Admin login successful!');
+        console.log('adminLogin: Attempting Firebase sign in...');
+        const userCredential = await signInWithEmailAndPassword(auth, adminEmail, password);
+        console.log('adminLogin: Sign in successful!', userCredential.user.email);
         
-        // Set authenticated state
-        setIsAuthenticated(true);
-        setModerator({
-          email: adminEmail,
-          username: adminData.username || 'admin',
-          displayName: adminData.displayName || 'Admin',
-          isAdmin: true,
-          isModerator: true,
-          assignedRoom: null // Admin has access to all rooms
-        });
-        
+        // The onAuthStateChanged listener will handle setting the state
+        // Just return true here
         return true;
       } catch (signInError) {
-        console.error('Admin sign-in error:', signInError.code, signInError.message);
+        console.error('adminLogin: Sign-in error:', signInError.code, signInError.message);
+        setLoading(false);
         return false;
       }
     } catch (error) {
-      console.error('Admin login error:', error);
-      return false;
-    } finally {
+      console.error('adminLogin: Unexpected error:', error);
       setLoading(false);
+      return false;
     }
   };
 
@@ -191,6 +208,7 @@ export function AuthProvider({ children }) {
       
       if (querySnapshot.empty) {
         console.log('No moderator found with this username');
+        setLoading(false);
         return false;
       }
       
@@ -203,6 +221,7 @@ export function AuthProvider({ children }) {
       
       if (!email) {
         console.log('Email not found for moderator');
+        setLoading(false);
         return false;
       }
       
@@ -212,27 +231,17 @@ export function AuthProvider({ children }) {
         await signInWithEmailAndPassword(auth, email, password);
         console.log('Moderator login successful!');
         
-        // Set authenticated state
-        setIsAuthenticated(true);
-        setModerator({
-          email: email,
-          username: moderatorData.username,
-          displayName: moderatorData.displayName,
-          isAdmin: moderatorData.isAdmin || false,
-          isModerator: true,
-          assignedRoom: moderatorData.assignedRoom || null
-        });
-        
+        // The onAuthStateChanged listener will handle setting the state
         return true;
       } catch (signInError) {
         console.error('Moderator sign-in error:', signInError.code, signInError.message);
+        setLoading(false);
         return false;
       }
     } catch (error) {
       console.error('Login error:', error);
-      return false;
-    } finally {
       setLoading(false);
+      return false;
     }
   };
 
@@ -387,6 +396,8 @@ export function AuthProvider({ children }) {
       setLoading(false);
     }
   };
+
+  console.log('AuthContext render, current state:', { isAuthenticated, moderator, loading });
 
   return (
     <AuthContext.Provider value={{
