@@ -11,6 +11,7 @@ import ModeratorQueueControl from './ModeratorQueueControl';
 import AdminBadge from '../ui/AdminBadge';
 import { requestNotificationPermission, areNotificationsEnabled, showNotification } from '../../utils/notifications';
 
+
 export default function RoomPage({ roomId, roomName }) {
   const location = useLocation();
   const navigate = useNavigate();
