@@ -1,6 +1,6 @@
 // src/firebase/initializeFirestore.js
 import { db } from './config';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection } from 'firebase/firestore';
 
 async function initializeRooms() {
   try {
@@ -37,6 +37,9 @@ async function initializeRooms() {
         outOfRotationPlayers: []
       });
     }
+    
+    // Make sure the historical_records collection reference exists
+    const historyCollectionRef = collection(db, 'historical_records');
     
     console.log("Rooms initialized successfully with empty queues");
   } catch (error) {

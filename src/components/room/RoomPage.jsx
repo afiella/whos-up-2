@@ -428,6 +428,92 @@ const handleExportHistory = (historyData) => {
   a.click();
   URL.revokeObjectURL(url);
 };
+
+// Function to save history to historical records collection
+const saveHistoryToArchive = async () => {
+  try {
+    const today = new Date();
+    const dateString = today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+    
+    // Create a unique ID for today's record
+    const recordId = `${roomId}_${dateString}`;
+    
+    // Reference to the historical_records collection
+    const historyRef = doc(db, 'historical_records', recordId);
+    
+    // Check if a record for today already exists
+    const existingRecord = await getDoc(historyRef);
+    
+    if (existingRecord.exists()) {
+      // Update existing record
+      await updateDoc(historyRef, {
+        history: history,
+        lastUpdated: new Date().toISOString(),
+        roomName: roomName,
+        shiftEnd: shiftEnd
+      });
+    } else {
+      // Create new record
+      await setDoc(historyRef, {
+        roomId: roomId,
+        date: dateString,
+        roomName: roomName,
+        history: history,
+        shiftEnd: shiftEnd,
+        createdAt: new Date().toISOString()
+      });
+    }
+    
+    console.log(`History archived for ${roomName} on ${dateString}`);
+    return true;
+  } catch (error) {
+    console.error("Error saving history to archive:", error);
+    return false;
+  }
+};
+
+// Then, update the shift end check function:
+useEffect(() => {
+  const checkShiftEnd = () => {
+    if (!shiftEnd) return;
+    
+    const now = new Date();
+    const currentTime = now.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      hour12: true 
+    });
+    
+    // Parse shift end time (e.g., "3:00 PM" -> comparable format)
+    const shiftEndTime = new Date();
+    const [time, period] = shiftEnd.split(' ');
+    const [hours, minutes] = time.split(':');
+    let hour = parseInt(hours);
+    
+    if (period === 'PM' && hour !== 12) hour += 12;
+    if (period === 'AM' && hour === 12) hour = 0;
+    
+    shiftEndTime.setHours(hour, parseInt(minutes), 0);
+    
+    // If current time is past shift end, save history and then remove player
+    if (now > shiftEndTime) {
+      // Save history before leaving
+      saveHistoryToArchive().then(() => {
+        handleLeaveGame();
+        alert(`Your shift has ended at ${shiftEnd}. You have been removed from the game. Today's history has been archived.`);
+        navigate('/');
+      });
+    }
+  };
+  
+  // Check immediately
+  checkShiftEnd();
+  
+  // Check every minute
+  const interval = setInterval(checkShiftEnd, 60000);
+  
+  return () => clearInterval(interval);
+}, [shiftEnd, navigate, history]);
   
   // Styling
   const container = css`
@@ -736,14 +822,33 @@ const handleExportHistory = (historyData) => {
       </div>
       
       {/* Activity History */}
-      <div className={card}>
-        <div className={cardTitle}>Activity History</div>
-        <ActivityHistory 
-          history={history} 
-          isAdmin={!!moderator} 
-          onExport={handleExportHistory} 
-        />
-      </div>
+<div className={card}>
+  <div className={cardTitle} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <span>Activity History</span>
+    {/* Add manual archive button for admins/moderators */}
+    {moderator && (
+      <button
+        className={`${button} secondary`}
+        onClick={async () => {
+          const success = await saveHistoryToArchive();
+          if (success) {
+            alert('Current history has been archived successfully!');
+          } else {
+            alert('Failed to archive history. Please try again.');
+          }
+        }}
+        style={{ fontSize: '0.875rem', padding: '0.4rem 0.8rem' }}
+      >
+        <span role="img" aria-label="Archive">📁</span> Archive History
+      </button>
+    )}
+  </div>
+  <ActivityHistory 
+    history={history} 
+    isAdmin={!!moderator} 
+    onExport={handleExportHistory} 
+  />
+</div>
       
       {/* Action Buttons - At bottom of screen (without the Leave button) */}
       <div className={buttonGroup}>
