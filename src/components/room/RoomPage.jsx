@@ -9,6 +9,7 @@ import ModeratorBadge from '../ui/ModeratorBadge';
 import QueueDisplay from './QueueDisplay';
 import ModeratorQueueControl from './ModeratorQueueControl';
 import AdminBadge from '../ui/AdminBadge';
+import ActivityHistory from './ActivityHistory';
 
 export default function RoomPage({ roomId, roomName }) {
   const location = useLocation();
@@ -24,6 +25,7 @@ export default function RoomPage({ roomId, roomName }) {
   const [queue, setQueue] = useState([]);
   const [busyPlayers, setBusyPlayers] = useState([]); // Repurposed for appointment players
   const [outOfRotationPlayers, setOutOfRotationPlayers] = useState([]);
+  const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [playerStatus, setPlayerStatus] = useState('waiting'); // 'inQueue', 'onAppointment', 'outOfRotation', 'waiting'
   const [queuePosition, setQueuePosition] = useState(-1);
@@ -85,6 +87,7 @@ export default function RoomPage({ roomId, roomName }) {
           queue: [],
           outOfRotationPlayers: [],
           busyPlayers: [], // Repurposed for appointment players
+          history: [], // Activity history
           lastUpdated: serverTimestamp()
         });
       }
@@ -104,6 +107,7 @@ export default function RoomPage({ roomId, roomName }) {
         // Update state with new data
         setQueue(newQueue);
         setOutOfRotationPlayers(data.outOfRotationPlayers || []);
+        setHistory(data.history || []);
         
         // Update busyPlayers (appointments) - now storing objects with name and timestamp
         const appointmentData = data.busyPlayers || [];
@@ -136,9 +140,31 @@ export default function RoomPage({ roomId, roomName }) {
     return () => unsubscribe();
   }, [roomId, playerName, navigate, roomName, queuePosition]);
   
+  // Function to add a history entry
+  const addHistoryEntry = async (action, player = playerName, details = null) => {
+    const roomRef = doc(db, 'rooms', roomId);
+    const historyEntry = {
+      action,
+      player,
+      timestamp: serverTimestamp(),
+      details
+    };
+    
+    await updateDoc(roomRef, {
+      history: arrayUnion(historyEntry)
+    });
+  };
+  
   // Handle joining the queue
   const handleJoinQueue = async () => {
     const roomRef = doc(db, 'rooms', roomId);
+    
+    // Determine if player is coming back from appointment
+    const wasOnAppointment = busyPlayers.some(item => 
+      typeof item === 'object' ? item.name === playerName : item === playerName
+    );
+    
+    // Update status in Firestore
     await updateDoc(roomRef, {
       queue: arrayUnion(playerName),
       outOfRotationPlayers: arrayRemove(playerName),
@@ -146,11 +172,20 @@ export default function RoomPage({ roomId, roomName }) {
         typeof item === 'object' ? item.name === playerName : item === playerName
       ))
     });
+    
+    // Add appropriate history entry
+    if (wasOnAppointment) {
+      addHistoryEntry('returnedFromAppointment');
+    } else {
+      addHistoryEntry('joinedQueue');
+    }
   };
   
   // Handle going out of rotation
   const handleOutOfRotation = async () => {
     const roomRef = doc(db, 'rooms', roomId);
+    
+    // Update status in Firestore
     await updateDoc(roomRef, {
       outOfRotationPlayers: arrayUnion(playerName),
       queue: arrayRemove(playerName),
@@ -158,6 +193,9 @@ export default function RoomPage({ roomId, roomName }) {
         typeof item === 'object' ? item.name === playerName : item === playerName
       ))
     });
+    
+    // Add history entry
+    addHistoryEntry('wentOutOfRotation');
   };
 
   // Handle going on appointment
@@ -190,6 +228,9 @@ export default function RoomPage({ roomId, roomName }) {
       queue: arrayRemove(playerName),
       outOfRotationPlayers: arrayRemove(playerName)
     });
+    
+    // Add history entry with timestamp details
+    addHistoryEntry('wentOnAppointment', playerName, { timestamp });
   };
 
   // Handle skipping turn but staying in queue
@@ -211,6 +252,9 @@ export default function RoomPage({ roomId, roomName }) {
         await updateDoc(roomRef, {
           queue: newQueue
         });
+        
+        // Add history entry
+        addHistoryEntry('skippedTurn');
       }
     }
   };
@@ -218,6 +262,8 @@ export default function RoomPage({ roomId, roomName }) {
   // Handle leaving the game completely
   const handleLeaveGame = async () => {
     const roomRef = doc(db, 'rooms', roomId);
+    
+    // Update Firestore to remove player from all arrays
     await updateDoc(roomRef, {
       queue: arrayRemove(playerName),
       outOfRotationPlayers: arrayRemove(playerName),
@@ -225,6 +271,9 @@ export default function RoomPage({ roomId, roomName }) {
         typeof item === 'object' ? item.name === playerName : item === playerName
       ))
     });
+    
+    // Add history entry
+    addHistoryEntry('leftGame');
   };
 
   // Handle queue reordering (moderator only)
@@ -235,6 +284,9 @@ export default function RoomPage({ roomId, roomName }) {
     await updateDoc(roomRef, {
       queue: newQueue
     });
+    
+    // Add history entry for moderator action
+    addHistoryEntry('reorderedQueue', moderator.displayName || moderator.username);
   };
 
   // Helper functions to identify admins and moderators
@@ -257,6 +309,84 @@ export default function RoomPage({ roomId, roomName }) {
       typeof item === 'object' ? item.name === name : item === name
     );
     return appointmentItem && typeof appointmentItem === 'object' ? appointmentItem.timestamp : null;
+  };
+  
+  // Export history to a format that can be copied to Google Docs
+  const handleExportHistory = (historyData) => {
+    // Format the history data for export
+    const today = new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    
+    let exportText = `# Activity Log for ${roomName} - ${today}\n\n`;
+    
+    // Group by date
+    const groupedHistory = {};
+    historyData.forEach(entry => {
+      const timestamp = entry.timestamp?.toDate ? entry.timestamp.toDate() : new Date();
+      const timeString = timestamp.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+      
+      if (!groupedHistory[timeString]) {
+        groupedHistory[timeString] = [];
+      }
+      
+      let actionText = '';
+      switch (entry.action) {
+        case 'joinedQueue':
+          actionText = `${entry.player} joined the queue`;
+          break;
+        case 'leftQueue':
+          actionText = `${entry.player} left the queue`;
+          break;
+        case 'skippedTurn':
+          actionText = `${entry.player} skipped their turn`;
+          break;
+        case 'wentOnAppointment':
+          actionText = `${entry.player} went on appointment`;
+          break;
+        case 'returnedFromAppointment':
+          actionText = `${entry.player} returned from appointment`;
+          break;
+        case 'wentOutOfRotation':
+          actionText = `${entry.player} went out of rotation`;
+          break;
+        case 'leftGame':
+          actionText = `${entry.player} left the game`;
+          break;
+        case 'reorderedQueue':
+          actionText = `${entry.player} reordered the queue`;
+          break;
+        default:
+          actionText = `${entry.player} performed an action`;
+      }
+      
+      groupedHistory[timeString].push(actionText);
+    });
+    
+    // Format the export
+    Object.keys(groupedHistory).sort().forEach(timeString => {
+      exportText += `## ${timeString}\n`;
+      groupedHistory[timeString].forEach(action => {
+        exportText += `- ${action}\n`;
+      });
+      exportText += '\n';
+    });
+    
+    // Create a "downloadable" text
+    const blob = new Blob([exportText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${roomName.replace(/\s+/g, '-')}_Activity_Log_${new Date().toISOString().split('T')[0]}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
   
   // Styling
@@ -563,6 +693,16 @@ export default function RoomPage({ roomId, roomName }) {
         ) : (
           <div>No one is on appointment</div>
         )}
+      </div>
+      
+      {/* Activity History */}
+      <div className={card}>
+        <div className={cardTitle}>Activity History</div>
+        <ActivityHistory 
+          history={history} 
+          isAdmin={!!moderator} 
+          onExport={handleExportHistory} 
+        />
       </div>
       
       {/* Action Buttons - At bottom of screen (without the Leave button) */}
