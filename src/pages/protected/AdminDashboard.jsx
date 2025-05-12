@@ -5,7 +5,7 @@ import { css } from '@emotion/css';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../firebase/config';
 import { onSnapshot, doc, updateDoc } from 'firebase/firestore';
-import HistoryArchive from '../../components/admin/HistoryArchive';
+import HistoryArchive from '../admin/HistoryArchive';
 
 
 export default function AdminDashboard() {
