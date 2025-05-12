@@ -30,18 +30,18 @@ export default function RoomPage({ roomId, roomName }) {
   const [queuePosition, setQueuePosition] = useState(-1);
   
   // State for notification permission
-  const [notificationsEnabled, setNotificationsEnabled] = useState(areNotificationsEnabled());
-  const [notificationBanner, setNotificationBanner] = useState(!areNotificationsEnabled());
+ // const [notificationsEnabled, setNotificationsEnabled] = useState(areNotificationsEnabled());
+  //const [notificationBanner, setNotificationBanner] = useState(!areNotificationsEnabled());
   
   // Function to request notification permission
-  const handleRequestNotifications = async () => {
-    const granted = await requestNotificationPermission();
-    setNotificationsEnabled(granted);
-    if (granted) {
-      setNotificationBanner(false);
-      showNotification('Notifications Enabled', 'You will be notified when it\'s your turn!');
-    }
-  };
+  //const handleRequestNotifications = async () => {
+   // const granted = await requestNotificationPermission();
+   // setNotificationsEnabled(granted);
+   // if (granted) {
+     // setNotificationBanner(false);
+     // showNotification('Notifications Enabled', 'You will be notified when it\'s your turn!');
+  //  }
+  //};
   
   // Check if current time has passed shift end time
   useEffect(() => {
