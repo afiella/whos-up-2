@@ -284,6 +284,12 @@ export default function RoomPage({ roomId, roomName }) {
   
   const infoBar = css`
     display: flex;
+    align-items: center;
+    gap: 1rem;
+  `;
+  
+  const playerInfo = css`
+    display: flex;
     gap: 1rem;
     align-items: center;
     font-family: Poppins, sans-serif;
@@ -418,6 +424,24 @@ export default function RoomPage({ roomId, roomName }) {
       }
     }
   `;
+
+  // New style for the leave button in the header
+  const leaveButton = css`
+    background-color: #b71c1c;
+    color: white;
+    border: none;
+    border-radius: 1rem;
+    padding: 0.5rem 1rem;
+    font-family: Poppins, sans-serif;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-left: 1rem;
+    
+    &:hover {
+      background-color: #8e0000;
+    }
+  `;
   
   if (loading) {
     return (
@@ -432,9 +456,23 @@ export default function RoomPage({ roomId, roomName }) {
       <div className={header}>
         <h1 className={title}>{roomName}</h1>
         <div className={infoBar}>
-          <span>Playing as: {playerName}</span>
-          <span>Shift ends: {shiftEnd}</span>
-          {moderator && <ModeratorBadge />}
+          <div className={playerInfo}>
+            <span>Playing as: {playerName}</span>
+            <span>Shift ends: {shiftEnd}</span>
+            {moderator && <ModeratorBadge />}
+          </div>
+          {/* Leave button moved to header */}
+          <button
+            className={leaveButton}
+            onClick={() => {
+              if (window.confirm('Are you sure you want to leave the game?')) {
+                handleLeaveGame();
+                navigate('/');
+              }
+            }}
+          >
+            Leave Game
+          </button>
         </div>
       </div>
     
@@ -527,7 +565,7 @@ export default function RoomPage({ roomId, roomName }) {
         )}
       </div>
       
-      {/* Action Buttons - At bottom of screen */}
+      {/* Action Buttons - At bottom of screen (without the Leave button) */}
       <div className={buttonGroup}>
         <button
           className={button}
@@ -557,17 +595,6 @@ export default function RoomPage({ roomId, roomName }) {
           disabled={playerStatus === 'onAppointment'}
         >
           <span role="img" aria-label="Calendar">📅</span> Appointment
-        </button>
-        <button
-          className={`${button} danger`}
-          onClick={() => {
-            if (window.confirm('Are you sure you want to leave the game?')) {
-              handleLeaveGame();
-              navigate('/');
-            }
-          }}
-        >
-          Leave
         </button>
       </div>
     </div>
