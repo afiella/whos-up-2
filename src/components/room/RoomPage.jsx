@@ -141,20 +141,44 @@ export default function RoomPage({ roomId, roomName }) {
   }, [roomId, playerName, navigate, roomName, queuePosition]);
   
   // Function to add a history entry
-  const addHistoryEntry = async (action, player = playerName, details = null) => {
+const addHistoryEntry = async (action, player = playerName, details = null) => {
+  try {
     const roomRef = doc(db, 'rooms', roomId);
+    
+    // First get the current history array
+    const roomData = await getDoc(roomRef);
+    const currentHistory = roomData.data()?.history || [];
+    
+    // Create the new history entry with a client-side timestamp instead of serverTimestamp
+    const now = new Date();
     const historyEntry = {
       action,
       player,
-      timestamp: serverTimestamp(),
+      timestamp: now.toISOString(), // Use ISO string format for consistency
+      displayTime: now.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      }),
       details
     };
     
+    // Add the new entry to the history array
+    const updatedHistory = [...currentHistory, historyEntry];
+    
+    // Update the history array in Firestore
     await updateDoc(roomRef, {
-      history: arrayUnion(historyEntry)
+      history: updatedHistory
     });
-  };
+    
+    console.log(`Added history entry: ${action} by ${player}`);
+  } catch (error) {
+    console.error("Error adding history entry:", error);
+  }
+};
   
+
+
   // Handle joining the queue
   const handleJoinQueue = async () => {
     const roomRef = doc(db, 'rooms', roomId);
@@ -312,82 +336,98 @@ export default function RoomPage({ roomId, roomName }) {
   };
   
   // Export history to a format that can be copied to Google Docs
-  const handleExportHistory = (historyData) => {
-    // Format the history data for export
-    const today = new Date().toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-    
-    let exportText = `# Activity Log for ${roomName} - ${today}\n\n`;
-    
-    // Group by date
-    const groupedHistory = {};
-    historyData.forEach(entry => {
-      const timestamp = entry.timestamp?.toDate ? entry.timestamp.toDate() : new Date();
-      const timeString = timestamp.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-      });
-      
-      if (!groupedHistory[timeString]) {
-        groupedHistory[timeString] = [];
+const handleExportHistory = (historyData) => {
+  // Format the history data for export
+  const today = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+  
+  let exportText = `# Activity Log for ${roomName} - ${today}\n\n`;
+  
+  // Group by date
+  const groupedHistory = {};
+  historyData.forEach(entry => {
+    // Get the display time
+    let timeString = entry.displayTime;
+    if (!timeString && entry.timestamp) {
+      if (typeof entry.timestamp === 'string') {
+        const date = new Date(entry.timestamp);
+        timeString = date.toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+      } else if (entry.timestamp.toDate) {
+        timeString = entry.timestamp.toDate().toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
       }
-      
-      let actionText = '';
-      switch (entry.action) {
-        case 'joinedQueue':
-          actionText = `${entry.player} joined the queue`;
-          break;
-        case 'leftQueue':
-          actionText = `${entry.player} left the queue`;
-          break;
-        case 'skippedTurn':
-          actionText = `${entry.player} skipped their turn`;
-          break;
-        case 'wentOnAppointment':
-          actionText = `${entry.player} went on appointment`;
-          break;
-        case 'returnedFromAppointment':
-          actionText = `${entry.player} returned from appointment`;
-          break;
-        case 'wentOutOfRotation':
-          actionText = `${entry.player} went out of rotation`;
-          break;
-        case 'leftGame':
-          actionText = `${entry.player} left the game`;
-          break;
-        case 'reorderedQueue':
-          actionText = `${entry.player} reordered the queue`;
-          break;
-        default:
-          actionText = `${entry.player} performed an action`;
-      }
-      
-      groupedHistory[timeString].push(actionText);
-    });
+    }
     
-    // Format the export
-    Object.keys(groupedHistory).sort().forEach(timeString => {
-      exportText += `## ${timeString}\n`;
-      groupedHistory[timeString].forEach(action => {
-        exportText += `- ${action}\n`;
-      });
-      exportText += '\n';
-    });
+    if (!timeString) {
+      timeString = 'Unknown time';
+    }
     
-    // Create a "downloadable" text
-    const blob = new Blob([exportText], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${roomName.replace(/\s+/g, '-')}_Activity_Log_${new Date().toISOString().split('T')[0]}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+    if (!groupedHistory[timeString]) {
+      groupedHistory[timeString] = [];
+    }
+    
+    let actionText = '';
+    switch (entry.action) {
+      case 'joinedQueue':
+        actionText = `${entry.player} joined the queue`;
+        break;
+      case 'leftQueue':
+        actionText = `${entry.player} left the queue`;
+        break;
+      case 'skippedTurn':
+        actionText = `${entry.player} skipped their turn`;
+        break;
+      case 'wentOnAppointment':
+        actionText = `${entry.player} went on appointment`;
+        break;
+      case 'returnedFromAppointment':
+        actionText = `${entry.player} returned from appointment`;
+        break;
+      case 'wentOutOfRotation':
+        actionText = `${entry.player} went out of rotation`;
+        break;
+      case 'leftGame':
+        actionText = `${entry.player} left the game`;
+        break;
+      case 'reorderedQueue':
+        actionText = `${entry.player} reordered the queue`;
+        break;
+      default:
+        actionText = `${entry.player} performed an action`;
+    }
+    
+    groupedHistory[timeString].push(actionText);
+  });
+  
+  // Format the export
+  Object.keys(groupedHistory).sort().forEach(timeString => {
+    exportText += `## ${timeString}\n`;
+    groupedHistory[timeString].forEach(action => {
+      exportText += `- ${action}\n`;
+    });
+    exportText += '\n';
+  });
+  
+  // Create a "downloadable" text
+  const blob = new Blob([exportText], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${roomName.replace(/\s+/g, '-')}_Activity_Log_${new Date().toISOString().split('T')[0]}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
   
   // Styling
   const container = css`
