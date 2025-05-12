@@ -125,19 +125,10 @@ export default function RoomPage({ roomId, roomName }) {
           setPlayerStatus('inQueue');
           setQueuePosition(newPosition);
           
-          // Check if player is now first in queue (and wasn't before)
-          if (newPosition === 0 && oldPosition > 0) {
-            if (areNotificationsEnabled()) {
-              showNotification(
-                "You're Up Next!", 
-                `It's your turn in ${roomName}!`, 
-                { 
-                  icon: '/logo192.png',
-                  badge: '/logo192.png' 
-                }
-              );
-            }
-          }
+          // Change to just:
+if (newPosition === 0 && oldPosition > 0) {
+  console.log("User is now first in queue");
+}
         } else if (data.outOfRotationPlayers?.includes(playerName)) {
           setPlayerStatus('outOfRotation');
           setQueuePosition(-1);
