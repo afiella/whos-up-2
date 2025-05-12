@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { css } from '@emotion/css';
 import { db } from '../../firebase/config';
-import { doc, onSnapshot, updateDoc, arrayUnion, arrayRemove, serverTimestamp, getDoc, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc, arrayUnion, arrayRemove, serverTimestamp, getDoc, setDoc, collection } from 'firebase/firestore';
 import { useAuth } from '../../context/AuthContext';
 import ModeratorBadge from '../ui/ModeratorBadge';
 import QueueDisplay from './QueueDisplay';
@@ -30,6 +30,81 @@ export default function RoomPage({ roomId, roomName }) {
   const [playerStatus, setPlayerStatus] = useState('waiting'); // 'inQueue', 'onAppointment', 'outOfRotation', 'waiting'
   const [queuePosition, setQueuePosition] = useState(-1);
   
+  // Function to save history to historical records collection
+  const saveHistoryToArchive = async () => {
+    try {
+      const today = new Date();
+      const dateString = today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+      
+      // Create a unique ID for today's record
+      const recordId = `${roomId}_${dateString}`;
+      
+      // Reference to the historical_records collection
+      const historyRef = doc(db, 'historical_records', recordId);
+      
+      // Check if a record for today already exists
+      const existingRecord = await getDoc(historyRef);
+      
+      if (existingRecord.exists()) {
+        // Update existing record
+        await updateDoc(historyRef, {
+          history: history,
+          lastUpdated: new Date().toISOString(),
+          roomName: roomName,
+          shiftEnd: shiftEnd
+        });
+      } else {
+        // Create new record
+        await setDoc(historyRef, {
+          roomId: roomId,
+          date: dateString,
+          roomName: roomName,
+          history: history,
+          shiftEnd: shiftEnd,
+          createdAt: new Date().toISOString()
+        });
+      }
+      
+      console.log(`History archived for ${roomName} on ${dateString}`);
+      return true;
+    } catch (error) {
+      console.error("Error saving history to archive:", error);
+      return false;
+    }
+  };
+  
+  // Function to reset history at end of day (8:01pm)
+  const resetHistoryAtEndOfDay = async () => {
+    try {
+      const now = new Date();
+      const hours = now.getHours();
+      const minutes = now.getMinutes();
+      
+      // Check if it's 8:01pm (20 hours, 1 minute in 24-hour format)
+      if (hours === 20 && minutes >= 1 && minutes < 6) {
+        console.log("It's 8:01pm - resetting history");
+        
+        // First archive current history if it exists and has entries
+        if (history.length > 0) {
+          await saveHistoryToArchive();
+        }
+        
+        // Then clear history
+        const roomRef = doc(db, 'rooms', roomId);
+        await updateDoc(roomRef, {
+          history: []
+        });
+        
+        console.log("History has been reset for the next day");
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Error resetting history:", error);
+      return false;
+    }
+  };
+  
   // Check if current time has passed shift end time
   useEffect(() => {
     const checkShiftEnd = () => {
@@ -53,11 +128,14 @@ export default function RoomPage({ roomId, roomName }) {
       
       shiftEndTime.setHours(hour, parseInt(minutes), 0);
       
-      // If current time is past shift end, kick player out
+      // If current time is past shift end, save history and then remove player
       if (now > shiftEndTime) {
-        handleLeaveGame();
-        alert(`Your shift has ended at ${shiftEnd}. You have been removed from the game.`);
-        navigate('/');
+        // Save history before leaving
+        saveHistoryToArchive().then(() => {
+          handleLeaveGame();
+          alert(`Your shift has ended at ${shiftEnd}. You have been removed from the game. Today's history has been archived.`);
+          navigate('/');
+        });
       }
     };
     
@@ -68,7 +146,29 @@ export default function RoomPage({ roomId, roomName }) {
     const interval = setInterval(checkShiftEnd, 60000);
     
     return () => clearInterval(interval);
-  }, [shiftEnd, navigate]);
+  }, [shiftEnd, navigate, history]);
+  
+  // Add useEffect for checking and resetting history at 8:01pm
+  useEffect(() => {
+    // Create an async function inside useEffect
+    const checkAndResetHistory = async () => {
+      try {
+        await resetHistoryAtEndOfDay();
+      } catch (error) {
+        console.error("Error checking history reset:", error);
+      }
+    };
+    
+    // Call it immediately
+    checkAndResetHistory();
+    
+    // Set up interval with the async function
+    const interval = setInterval(() => {
+      checkAndResetHistory();
+    }, 5 * 60 * 1000); // Check every 5 minutes
+    
+    return () => clearInterval(interval);
+  }, []);
   
   // Initialize room and listen for updates
   useEffect(() => {
@@ -141,53 +241,37 @@ export default function RoomPage({ roomId, roomName }) {
   }, [roomId, playerName, navigate, roomName, queuePosition]);
   
   // Function to add a history entry
-const addHistoryEntry = async (action, player = playerName, details = null) => {
-  try {
-    // Check if player name is valid
-    if (!player || player === 'undefined') {
-      console.error("Attempted to add history entry with invalid player name");
-      return;
+  const addHistoryEntry = async (action, player = playerName, details = null) => {
+    try {
+      // Check if player name is valid
+      if (!player || player === 'undefined') {
+        console.error("Attempted to add history entry with invalid player name");
+        return;
+      }
+      
+      const roomRef = doc(db, 'rooms', roomId);
+      const historyEntry = {
+        action,
+        player,
+        timestamp: new Date().toISOString(), // Use ISO string format
+        displayTime: new Date().toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        }),
+        details
+      };
+      
+      await updateDoc(roomRef, {
+        history: arrayUnion(historyEntry)
+      });
+      
+      console.log(`Added history entry: ${action} by ${player}`);
+    } catch (error) {
+      console.error("Error adding history entry:", error);
     }
-    
-    const roomRef = doc(db, 'rooms', roomId);
-    const historyEntry = {
-      action,
-      player,
-      timestamp: new Date().toISOString(), // Use ISO string format
-      displayTime: new Date().toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-      }),
-      details
-    };
-    
-    await updateDoc(roomRef, {
-      history: arrayUnion(historyEntry)
-    });
-    
-    console.log(`Added history entry: ${action} by ${player}`);
-  } catch (error) {
-    console.error("Error adding history entry:", error);
-  }
-};
-    
-    // Add the new entry to the history array
-    const updatedHistory = [...currentHistory, historyEntry];
-    
-    // Update the history array in Firestore
-    await updateDoc(roomRef, {
-      history: updatedHistory
-    });
-    
-    console.log(`Added history entry: ${action} by ${player}`);
-  } catch (error) {
-    console.error("Error adding history entry:", error);
-  }
-};
+  };
   
-
-
   // Handle joining the queue
   const handleJoinQueue = async () => {
     const roomRef = doc(db, 'rooms', roomId);
@@ -208,9 +292,9 @@ const addHistoryEntry = async (action, player = playerName, details = null) => {
     
     // Add appropriate history entry
     if (wasOnAppointment) {
-      addHistoryEntry('returnedFromAppointment');
+      addHistoryEntry('returnedFromAppointment', playerName);
     } else {
-      addHistoryEntry('joinedQueue');
+      addHistoryEntry('joinedQueue', playerName);
     }
   };
   
@@ -228,7 +312,7 @@ const addHistoryEntry = async (action, player = playerName, details = null) => {
     });
     
     // Add history entry
-    addHistoryEntry('wentOutOfRotation');
+    addHistoryEntry('wentOutOfRotation', playerName);
   };
 
   // Handle going on appointment
@@ -266,38 +350,6 @@ const addHistoryEntry = async (action, player = playerName, details = null) => {
     addHistoryEntry('wentOnAppointment', playerName, { timestamp });
   };
 
-  // Resets the history at 8:01pm
-const resetHistoryAtEndOfDay = async () => {
-  try {
-    const now = new Date();
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-    
-    // Check if it's 8:01pm (20 hours, 1 minute in 24-hour format)
-    if (hours === 20 && minutes >= 1 && minutes < 6) {
-      console.log("It's 8:01pm - resetting history");
-      
-      // First archive current history if it exists and has entries
-      if (history.length > 0) {
-        await saveHistoryToArchive();
-      }
-      
-      // Then clear history
-      const roomRef = doc(db, 'rooms', roomId);
-      await updateDoc(roomRef, {
-        history: []
-      });
-      
-      console.log("History has been reset for the next day");
-      return true;
-    }
-    return false;
-  } catch (error) {
-    console.error("Error resetting history:", error);
-    return false;
-  }
-};
-
   // Handle skipping turn but staying in queue
   const handleSkipTurn = async () => {
     const roomRef = doc(db, 'rooms', roomId);
@@ -319,7 +371,7 @@ const resetHistoryAtEndOfDay = async () => {
         });
         
         // Add history entry
-        addHistoryEntry('skippedTurn');
+        addHistoryEntry('skippedTurn', playerName);
       }
     }
   };
@@ -338,7 +390,7 @@ const resetHistoryAtEndOfDay = async () => {
     });
     
     // Add history entry
-    addHistoryEntry('leftGame');
+    addHistoryEntry('leftGame', playerName);
   };
 
   // Handle queue reordering (moderator only)
@@ -352,6 +404,100 @@ const resetHistoryAtEndOfDay = async () => {
     
     // Add history entry for moderator action
     addHistoryEntry('reorderedQueue', moderator.displayName || moderator.username);
+  };
+
+  // Export history to a format that can be copied to Google Docs
+  const handleExportHistory = (historyData) => {
+    // Format the history data for export
+    const today = new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    
+    let exportText = `# Activity Log for ${roomName} - ${today}\n\n`;
+    
+    // Group by date
+    const groupedHistory = {};
+    historyData.forEach(entry => {
+      // Get the display time
+      let timeString = entry.displayTime;
+      if (!timeString && entry.timestamp) {
+        if (typeof entry.timestamp === 'string') {
+          const date = new Date(entry.timestamp);
+          timeString = date.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          });
+        } else if (entry.timestamp.toDate) {
+          timeString = entry.timestamp.toDate().toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          });
+        }
+      }
+      
+      if (!timeString) {
+        timeString = 'Unknown time';
+      }
+      
+      if (!groupedHistory[timeString]) {
+        groupedHistory[timeString] = [];
+      }
+      
+      let actionText = '';
+      switch (entry.action) {
+        case 'joinedQueue':
+          actionText = `${entry.player} joined the queue`;
+          break;
+        case 'leftQueue':
+          actionText = `${entry.player} left the queue`;
+          break;
+        case 'skippedTurn':
+          actionText = `${entry.player} skipped their turn`;
+          break;
+        case 'wentOnAppointment':
+          actionText = `${entry.player} went on appointment`;
+          break;
+        case 'returnedFromAppointment':
+          actionText = `${entry.player} returned from appointment`;
+          break;
+        case 'wentOutOfRotation':
+          actionText = `${entry.player} went out of rotation`;
+          break;
+        case 'leftGame':
+          actionText = `${entry.player} left the game`;
+          break;
+        case 'reorderedQueue':
+          actionText = `${entry.player} reordered the queue`;
+          break;
+        default:
+          actionText = `${entry.player} performed an action`;
+      }
+      
+      groupedHistory[timeString].push(actionText);
+    });
+    
+    // Format the export
+    Object.keys(groupedHistory).sort().forEach(timeString => {
+      exportText += `## ${timeString}\n`;
+      groupedHistory[timeString].forEach(action => {
+        exportText += `- ${action}\n`;
+      });
+      exportText += '\n';
+    });
+    
+    // Create a "downloadable" text
+    const blob = new Blob([exportText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${roomName.replace(/\s+/g, '-')}_Activity_Log_${new Date().toISOString().split('T')[0]}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   // Helper functions to identify admins and moderators
@@ -376,199 +522,6 @@ const resetHistoryAtEndOfDay = async () => {
     return appointmentItem && typeof appointmentItem === 'object' ? appointmentItem.timestamp : null;
   };
   
-  // Export history to a format that can be copied to Google Docs
-const handleExportHistory = (historyData) => {
-  // Format the history data for export
-  const today = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-  
-  let exportText = `# Activity Log for ${roomName} - ${today}\n\n`;
-  
-  // Group by date
-  const groupedHistory = {};
-  historyData.forEach(entry => {
-    // Get the display time
-    let timeString = entry.displayTime;
-    if (!timeString && entry.timestamp) {
-      if (typeof entry.timestamp === 'string') {
-        const date = new Date(entry.timestamp);
-        timeString = date.toLocaleTimeString('en-US', {
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true
-        });
-      } else if (entry.timestamp.toDate) {
-        timeString = entry.timestamp.toDate().toLocaleTimeString('en-US', {
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true
-        });
-      }
-    }
-    
-    if (!timeString) {
-      timeString = 'Unknown time';
-    }
-    
-    if (!groupedHistory[timeString]) {
-      groupedHistory[timeString] = [];
-    }
-    
-    let actionText = '';
-    switch (entry.action) {
-      case 'joinedQueue':
-        actionText = `${entry.player} joined the queue`;
-        break;
-      case 'leftQueue':
-        actionText = `${entry.player} left the queue`;
-        break;
-      case 'skippedTurn':
-        actionText = `${entry.player} skipped their turn`;
-        break;
-      case 'wentOnAppointment':
-        actionText = `${entry.player} went on appointment`;
-        break;
-      case 'returnedFromAppointment':
-        actionText = `${entry.player} returned from appointment`;
-        break;
-      case 'wentOutOfRotation':
-        actionText = `${entry.player} went out of rotation`;
-        break;
-      case 'leftGame':
-        actionText = `${entry.player} left the game`;
-        break;
-      case 'reorderedQueue':
-        actionText = `${entry.player} reordered the queue`;
-        break;
-      default:
-        actionText = `${entry.player} performed an action`;
-    }
-    
-    groupedHistory[timeString].push(actionText);
-  });
-  
-  // Format the export
-  Object.keys(groupedHistory).sort().forEach(timeString => {
-    exportText += `## ${timeString}\n`;
-    groupedHistory[timeString].forEach(action => {
-      exportText += `- ${action}\n`;
-    });
-    exportText += '\n';
-  });
-  
-  // Create a "downloadable" text
-  const blob = new Blob([exportText], { type: 'text/plain' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${roomName.replace(/\s+/g, '-')}_Activity_Log_${new Date().toISOString().split('T')[0]}.txt`;
-  a.click();
-  URL.revokeObjectURL(url);
-};
-
-// Function to save history to historical records collection
-const saveHistoryToArchive = async () => {
-  try {
-    const today = new Date();
-    const dateString = today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
-    
-    // Create a unique ID for today's record
-    const recordId = `${roomId}_${dateString}`;
-    
-    // Reference to the historical_records collection
-    const historyRef = doc(db, 'historical_records', recordId);
-    
-    // Check if a record for today already exists
-    const existingRecord = await getDoc(historyRef);
-    
-    if (existingRecord.exists()) {
-      // Update existing record
-      await updateDoc(historyRef, {
-        history: history,
-        lastUpdated: new Date().toISOString(),
-        roomName: roomName,
-        shiftEnd: shiftEnd
-      });
-    } else {
-      // Create new record
-      await setDoc(historyRef, {
-        roomId: roomId,
-        date: dateString,
-        roomName: roomName,
-        history: history,
-        shiftEnd: shiftEnd,
-        createdAt: new Date().toISOString()
-      });
-    }
-    
-    console.log(`History archived for ${roomName} on ${dateString}`);
-    return true;
-  } catch (error) {
-    console.error("Error saving history to archive:", error);
-    return false;
-  }
-};
-
-// Then, update the shift end check function:
-useEffect(() => {
-  const checkShiftEnd = () => {
-    if (!shiftEnd) return;
-    
-    const now = new Date();
-    const currentTime = now.toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
-      minute: '2-digit', 
-      hour12: true 
-    });
-    
-    // Parse shift end time (e.g., "3:00 PM" -> comparable format)
-    const shiftEndTime = new Date();
-    const [time, period] = shiftEnd.split(' ');
-    const [hours, minutes] = time.split(':');
-    let hour = parseInt(hours);
-    
-    if (period === 'PM' && hour !== 12) hour += 12;
-    if (period === 'AM' && hour === 12) hour = 0;
-    
-    shiftEndTime.setHours(hour, parseInt(minutes), 0);
-    
-    // If current time is past shift end, save history and then remove player
-    if (now > shiftEndTime) {
-      // Save history before leaving
-      saveHistoryToArchive().then(() => {
-        handleLeaveGame();
-        alert(`Your shift has ended at ${shiftEnd}. You have been removed from the game. Today's history has been archived.`);
-        navigate('/');
-      });
-    }
-  };
-  
-  // Check immediately
-  checkShiftEnd();
-  
-  // Check every minute
-  const interval = setInterval(checkShiftEnd, 60000);
-  
-  return () => clearInterval(interval);
-}, [shiftEnd, navigate, history]);
-
-// this is for the history restting at 8:01pm
-useEffect(() => {
-  // Check once on component mount
-  resetHistoryAtEndOfDay();
-  
-  // Then check every 5 minutes
-  const interval = setInterval(() => {
-    resetHistoryAtEndOfDay();
-  }, 5 * 60 * 1000); // 5 minutes in milliseconds
-  
-  return () => clearInterval(interval);
-}, []);
-
   // Styling
   const container = css`
     min-height: 100vh;
@@ -876,33 +829,33 @@ useEffect(() => {
       </div>
       
       {/* Activity History */}
-<div className={card}>
-  <div className={cardTitle} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-    <span>Activity History</span>
-    {/* Add manual archive button for admins/moderators */}
-    {moderator && (
-      <button
-        className={`${button} secondary`}
-        onClick={async () => {
-          const success = await saveHistoryToArchive();
-          if (success) {
-            alert('Current history has been archived successfully!');
-          } else {
-            alert('Failed to archive history. Please try again.');
-          }
-        }}
-        style={{ fontSize: '0.875rem', padding: '0.4rem 0.8rem' }}
-      >
-        <span role="img" aria-label="Archive">📁</span> Archive History
-      </button>
-    )}
-  </div>
-  <ActivityHistory 
-    history={history} 
-    isAdmin={!!moderator} 
-    onExport={handleExportHistory} 
-  />
-</div>
+      <div className={card}>
+        <div className={cardTitle} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>Activity History</span>
+          {/* Add manual archive button for admins/moderators */}
+          {moderator && (
+            <button
+              className={`${button} secondary`}
+              onClick={async () => {
+                const success = await saveHistoryToArchive();
+                if (success) {
+                  alert('Current history has been archived successfully!');
+                } else {
+                  alert('Failed to archive history. Please try again.');
+                }
+              }}
+              style={{ fontSize: '0.875rem', padding: '0.4rem 0.8rem' }}
+            >
+              <span role="img" aria-label="Archive">📁</span> Archive History
+            </button>
+          )}
+        </div>
+        <ActivityHistory 
+          history={history} 
+          isAdmin={!!moderator} 
+          onExport={handleExportHistory} 
+        />
+      </div>
       
       {/* Action Buttons - At bottom of screen (without the Leave button) */}
       <div className={buttonGroup}>
