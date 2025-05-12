@@ -143,25 +143,34 @@ export default function RoomPage({ roomId, roomName }) {
   // Function to add a history entry
 const addHistoryEntry = async (action, player = playerName, details = null) => {
   try {
+    // Check if player name is valid
+    if (!player || player === 'undefined') {
+      console.error("Attempted to add history entry with invalid player name");
+      return;
+    }
+    
     const roomRef = doc(db, 'rooms', roomId);
-    
-    // First get the current history array
-    const roomData = await getDoc(roomRef);
-    const currentHistory = roomData.data()?.history || [];
-    
-    // Create the new history entry with a client-side timestamp instead of serverTimestamp
-    const now = new Date();
     const historyEntry = {
       action,
       player,
-      timestamp: now.toISOString(), // Use ISO string format for consistency
-      displayTime: now.toLocaleTimeString('en-US', {
+      timestamp: new Date().toISOString(), // Use ISO string format
+      displayTime: new Date().toLocaleTimeString('en-US', {
         hour: 'numeric',
         minute: '2-digit',
         hour12: true
       }),
       details
     };
+    
+    await updateDoc(roomRef, {
+      history: arrayUnion(historyEntry)
+    });
+    
+    console.log(`Added history entry: ${action} by ${player}`);
+  } catch (error) {
+    console.error("Error adding history entry:", error);
+  }
+};
     
     // Add the new entry to the history array
     const updatedHistory = [...currentHistory, historyEntry];
