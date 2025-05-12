@@ -15,24 +15,27 @@ export default function RoomSelectPage() {
   const name = state?.name || (moderator ? moderator.displayName || moderator.username : 'Friend');
 
   // Define shifts for each room
-  const shifts = {
-    '59': [
-      { value: 'double', label: 'Double (9:30 AM - 8:00 PM)', endTime: '8:00 PM' },
-      { value: 'opening', label: 'Opening (9:30 AM - 3:00 PM)', endTime: '3:00 PM' },
-      { value: 'close', label: 'Close (3:00 PM - 8:00 PM)', endTime: '8:00 PM' }
-    ],
-    'bh': [
-      { value: 'double', label: 'Double (8:30 AM - 8:00 PM)', endTime: '8:00 PM' },
-      { value: 'opening', label: 'Opening (8:30 AM - 3:00 PM)', endTime: '3:00 PM' },
-      { value: 'close', label: 'Close (3:00 PM - 8:00 PM)', endTime: '8:00 PM' },
-      { value: 'afternoon', label: 'Afternoon (8:30 AM - 5:00 PM)', endTime: '5:00 PM' }
-    ],
-    'ashland': [
-      { value: 'double', label: 'Double (9:30 AM - 8:00 PM)', endTime: '8:00 PM' },
-      { value: 'opening', label: 'Opening (9:30 AM - 3:00 PM)', endTime: '3:00 PM' },
-      { value: 'close', label: 'Close (3:00 PM - 8:00 PM)', endTime: '8:00 PM' }
-    ]
-  };
+const shifts = {
+  '59': [
+    { value: 'double', label: 'Double (9:30 AM - 8:00 PM)', endTime: '8:00 PM' },
+    { value: 'opening', label: 'Opening (9:30 AM - 3:00 PM)', endTime: '3:00 PM' },
+    { value: 'close', label: 'Close (3:00 PM - 8:00 PM)', endTime: '8:00 PM' },
+    { value: 'sunday', label: 'Sunday (11:30 AM - 6:00 PM)', endTime: '6:00 PM' }
+  ],
+  'bh': [
+    { value: 'double', label: 'Double (8:30 AM - 8:00 PM)', endTime: '8:00 PM' },
+    { value: 'opening', label: 'Opening (8:30 AM - 3:00 PM)', endTime: '3:00 PM' },
+    { value: 'close', label: 'Close (3:00 PM - 8:00 PM)', endTime: '8:00 PM' },
+    { value: 'afternoon', label: 'Afternoon (8:30 AM - 5:00 PM)', endTime: '5:00 PM' },
+    { value: 'sunday', label: 'Sunday (11:30 AM - 6:00 PM)', endTime: '6:00 PM' }
+  ],
+  'ashland': [
+    { value: 'double', label: 'Double (9:30 AM - 8:00 PM)', endTime: '8:00 PM' },
+    { value: 'opening', label: 'Opening (9:30 AM - 3:00 PM)', endTime: '3:00 PM' },
+    { value: 'close', label: 'Close (3:00 PM - 8:00 PM)', endTime: '8:00 PM' },
+    { value: 'sunday', label: 'Sunday (11:30 AM - 6:00 PM)', endTime: '6:00 PM' }
+  ]
+};
 
   const container = css`
     display: flex;
@@ -170,6 +173,23 @@ export default function RoomSelectPage() {
     }
   };
 
+  // Function to get available shifts based on the current day
+const getAvailableShifts = (roomId) => {
+  // If no room is selected, return empty array
+  if (!roomId) return [];
+  
+  const today = new Date().getDay(); // 0 is Sunday, 1 is Monday, etc.
+  const isSunday = today === 0;
+  
+  // If it's Sunday, only show the Sunday shift
+  if (isSunday) {
+    return shifts[roomId].filter(shift => shift.value === 'sunday');
+  }
+  
+  // On other days, show all shifts except Sunday
+  return shifts[roomId].filter(shift => shift.value !== 'sunday');
+};
+
   return (
     <div className={container}>
       <h1 className={heading}>Select Your Room</h1>
@@ -197,19 +217,19 @@ export default function RoomSelectPage() {
       </div>
 
       {selectedRoom && (
-        <div className={shiftContainer}>
-          <div className={shiftTitle}>Select Your Shift</div>
-          {shifts[selectedRoom].map(shift => (
-            <button
-              key={shift.value}
-              onClick={() => handleShiftSelect(shift.value)}
-              className={`${shiftButton} ${selectedShift === shift.value ? 'selected' : ''}`}
-            >
-              {shift.label}
-            </button>
-          ))}
-        </div>
-      )}
+  <div className={shiftContainer}>
+    <div className={shiftTitle}>Select Your Shift</div>
+    {getAvailableShifts(selectedRoom).map(shift => (
+      <button
+        key={shift.value}
+        onClick={() => handleShiftSelect(shift.value)}
+        className={`${shiftButton} ${selectedShift === shift.value ? 'selected' : ''}`}
+      >
+        {shift.label}
+      </button>
+    ))}
+  </div>
+)}
 
       {selectedRoom && selectedShift && (
         <button
