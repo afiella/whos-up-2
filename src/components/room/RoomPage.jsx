@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { css } from '@emotion/css';
 import { db } from '../../firebase/config';
-import { doc, onSnapshot, updateDoc, arrayUnion, arrayRemove, serverTimestamp, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc, arrayUnion, arrayRemove, serverTimestamp, getDoc, setDoc } from 'firebase/firestore';
 import { useAuth } from '../../context/AuthContext';
 import ModeratorBadge from '../ui/ModeratorBadge';
 import QueueDisplay from './QueueDisplay';
