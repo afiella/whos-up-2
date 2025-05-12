@@ -20,7 +20,7 @@ import { CSS } from '@dnd-kit/utilities';
 import ModeratorBadge from '../ui/ModeratorBadge';
 import AdminBadge from '../ui/AdminBadge';
 
-function SortableItem({ id, player, currentPlayer, isModerator, isAdmin, index }) {
+function SortableItem({ id, player, currentPlayer, isModerator, isAdmin, isOnAppointment, getAppointmentTime, index }) {
   const {
     attributes,
     listeners,
@@ -73,6 +73,26 @@ function SortableItem({ id, player, currentPlayer, isModerator, isAdmin, index }
     }
   `;
 
+  // New style for the appointment banner
+  const appointmentBanner = css`
+    display: inline-flex;
+    align-items: center;
+    background-color: #9c27b0; /* Bright purple color */
+    color: white;
+    font-family: Poppins, sans-serif;
+    font-size: 0.75rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 0.25rem;
+    margin-left: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    
+    .appointment-time {
+      font-size: 0.625rem;
+      margin-left: 0.25rem;
+      opacity: 0.9;
+    }
+  `;
+
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners} className={itemStyle}>
       <div className="player-info">
@@ -81,13 +101,23 @@ function SortableItem({ id, player, currentPlayer, isModerator, isAdmin, index }
         {player === currentPlayer && <span className="you-badge">(You)</span>}
         {isAdmin && isAdmin(player) && <AdminBadge />}
         {isModerator && isModerator(player) && <ModeratorBadge />}
+        
+        {/* Show appointment banner if player is on appointment */}
+        {isOnAppointment && getAppointmentTime && isOnAppointment(player) && (
+          <div className={appointmentBanner}>
+            ON APPOINTMENT
+            <span className="appointment-time">
+              {getAppointmentTime(player)}
+            </span>
+          </div>
+        )}
       </div>
       <div className="drag-handle">⋮⋮</div>
     </div>
   );
 }
 
-export default function ModeratorQueueControl({ queue, currentPlayer, isModerator, isAdmin, onReorder }) {
+export default function ModeratorQueueControl({ queue, currentPlayer, isModerator, isAdmin, isOnAppointment, getAppointmentTime, onReorder }) {
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -145,6 +175,8 @@ export default function ModeratorQueueControl({ queue, currentPlayer, isModerato
               currentPlayer={currentPlayer}
               isModerator={isModerator}
               isAdmin={isAdmin}
+              isOnAppointment={isOnAppointment}
+              getAppointmentTime={getAppointmentTime}
               index={index}
             />
           ))}

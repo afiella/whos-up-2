@@ -11,7 +11,9 @@ async function initializeRooms() {
       await setDoc(doc(db, 'rooms', 'bh'), {
         queue: [],
         history: [],
-        busyPlayers: []
+        busyPlayers: [],
+        outOfRotationPlayers: [],
+        appointmentPlayers: []
       });
     }
     
@@ -22,7 +24,9 @@ async function initializeRooms() {
       await setDoc(doc(db, 'rooms', '59'), {
         queue: [],
         history: [],
-        busyPlayers: []
+        busyPlayers: [],
+        outOfRotationPlayers: [],
+        appointmentPlayers: []
       });
     }
     
@@ -33,7 +37,9 @@ async function initializeRooms() {
       await setDoc(doc(db, 'rooms', 'ashland'), {
         queue: [],
         history: [],
-        busyPlayers: []
+        busyPlayers: [],
+        outOfRotationPlayers: [],
+        appointmentPlayers: []
       });
     }
     

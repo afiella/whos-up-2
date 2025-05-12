@@ -9,8 +9,6 @@ import ModeratorBadge from '../ui/ModeratorBadge';
 import QueueDisplay from './QueueDisplay';
 import ModeratorQueueControl from './ModeratorQueueControl';
 import AdminBadge from '../ui/AdminBadge';
-import { requestNotificationPermission, areNotificationsEnabled, showNotification } from '../../utils/notifications';
-import { areNotificationsSupported, isIOS } from '../../utils/notifications';
 
 export default function RoomPage({ roomId, roomName }) {
   const location = useLocation();
@@ -24,24 +22,11 @@ export default function RoomPage({ roomId, roomName }) {
   
   // State for room data
   const [queue, setQueue] = useState([]);
+  const [busyPlayers, setBusyPlayers] = useState([]); // Repurposed for appointment players
   const [outOfRotationPlayers, setOutOfRotationPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [playerStatus, setPlayerStatus] = useState('waiting'); // 'inQueue', 'outOfRotation', 'waiting'
+  const [playerStatus, setPlayerStatus] = useState('waiting'); // 'inQueue', 'onAppointment', 'outOfRotation', 'waiting'
   const [queuePosition, setQueuePosition] = useState(-1);
-  
-  // State for notification permission
- // const [notificationsEnabled, setNotificationsEnabled] = useState(areNotificationsEnabled());
-  //const [notificationBanner, setNotificationBanner] = useState(!areNotificationsEnabled());
-  
-  // Function to request notification permission
-  //const handleRequestNotifications = async () => {
-   // const granted = await requestNotificationPermission();
-   // setNotificationsEnabled(granted);
-   // if (granted) {
-     // setNotificationBanner(false);
-     // showNotification('Notifications Enabled', 'You will be notified when it\'s your turn!');
-  //  }
-  //};
   
   // Check if current time has passed shift end time
   useEffect(() => {
@@ -99,6 +84,7 @@ export default function RoomPage({ roomId, roomName }) {
         await updateDoc(roomRef, {
           queue: [],
           outOfRotationPlayers: [],
+          busyPlayers: [], // Repurposed for appointment players
           lastUpdated: serverTimestamp()
         });
       }
@@ -119,16 +105,23 @@ export default function RoomPage({ roomId, roomName }) {
         setQueue(newQueue);
         setOutOfRotationPlayers(data.outOfRotationPlayers || []);
         
-        // Check player's position in queue
+        // Update busyPlayers (appointments) - now storing objects with name and timestamp
+        const appointmentData = data.busyPlayers || [];
+        setBusyPlayers(appointmentData);
+        
+        // Check player's position in queue and their status
         if (newQueue.includes(playerName)) {
           const newPosition = newQueue.indexOf(playerName);
           setPlayerStatus('inQueue');
           setQueuePosition(newPosition);
           
-          // Change to just:
-if (newPosition === 0 && oldPosition > 0) {
-  console.log("User is now first in queue");
-}
+          // Notify if player is now first in queue
+          if (newPosition === 0 && oldPosition > 0) {
+            console.log("User is now first in queue");
+          }
+        } else if (appointmentData.some(item => typeof item === 'object' ? item.name === playerName : item === playerName)) {
+          setPlayerStatus('onAppointment');
+          setQueuePosition(-1);
         } else if (data.outOfRotationPlayers?.includes(playerName)) {
           setPlayerStatus('outOfRotation');
           setQueuePosition(-1);
@@ -148,7 +141,10 @@ if (newPosition === 0 && oldPosition > 0) {
     const roomRef = doc(db, 'rooms', roomId);
     await updateDoc(roomRef, {
       queue: arrayUnion(playerName),
-      outOfRotationPlayers: arrayRemove(playerName)
+      outOfRotationPlayers: arrayRemove(playerName),
+      busyPlayers: arrayRemove(...busyPlayers.filter(item => 
+        typeof item === 'object' ? item.name === playerName : item === playerName
+      ))
     });
   };
   
@@ -157,7 +153,42 @@ if (newPosition === 0 && oldPosition > 0) {
     const roomRef = doc(db, 'rooms', roomId);
     await updateDoc(roomRef, {
       outOfRotationPlayers: arrayUnion(playerName),
-      queue: arrayRemove(playerName)
+      queue: arrayRemove(playerName),
+      busyPlayers: arrayRemove(...busyPlayers.filter(item => 
+        typeof item === 'object' ? item.name === playerName : item === playerName
+      ))
+    });
+  };
+
+  // Handle going on appointment
+  const handleOnAppointment = async () => {
+    const roomRef = doc(db, 'rooms', roomId);
+    
+    // Get current timestamp in format: "3:45 PM"
+    const now = new Date();
+    const timestamp = now.toLocaleTimeString('en-US', { 
+      hour: 'numeric', 
+      minute: '2-digit', 
+      hour12: true 
+    });
+    
+    // Create the appointment object with name and timestamp
+    const appointmentData = {
+      name: playerName,
+      timestamp: timestamp
+    };
+    
+    // First remove any existing appointment for this player (if upgrading from string to object format)
+    const currentBusyPlayers = (await getDoc(roomRef)).data()?.busyPlayers || [];
+    const updatedBusyPlayers = currentBusyPlayers.filter(item => 
+      typeof item === 'object' ? item.name !== playerName : item !== playerName
+    );
+    
+    // Remove from queue and outOfRotation if present, then add the new appointment data
+    await updateDoc(roomRef, {
+      busyPlayers: [...updatedBusyPlayers, appointmentData],
+      queue: arrayRemove(playerName),
+      outOfRotationPlayers: arrayRemove(playerName)
     });
   };
 
@@ -189,7 +220,10 @@ if (newPosition === 0 && oldPosition > 0) {
     const roomRef = doc(db, 'rooms', roomId);
     await updateDoc(roomRef, {
       queue: arrayRemove(playerName),
-      outOfRotationPlayers: arrayRemove(playerName)
+      outOfRotationPlayers: arrayRemove(playerName),
+      busyPlayers: arrayRemove(...busyPlayers.filter(item => 
+        typeof item === 'object' ? item.name === playerName : item === playerName
+      ))
     });
   };
 
@@ -212,6 +246,18 @@ if (newPosition === 0 && oldPosition > 0) {
     return moderator && !moderator.isAdmin && name === moderator.displayName;
   };
 
+  // Helper function to check if a player is on appointment
+  const isOnAppointment = (name) => {
+    return busyPlayers.some(item => typeof item === 'object' ? item.name === name : item === name);
+  };
+  
+  // Helper function to get appointment timestamp for a player
+  const getAppointmentTime = (name) => {
+    const appointmentItem = busyPlayers.find(item => 
+      typeof item === 'object' ? item.name === name : item === name
+    );
+    return appointmentItem && typeof appointmentItem === 'object' ? appointmentItem.timestamp : null;
+  };
   
   // Styling
   const container = css`
@@ -282,6 +328,26 @@ if (newPosition === 0 && oldPosition > 0) {
     }
   `;
   
+  // New style for the appointment banner
+  const appointmentBanner = css`
+    display: inline-flex;
+    align-items: center;
+    background-color: #9c27b0; /* Bright purple color */
+    color: white;
+    font-family: Poppins, sans-serif;
+    font-size: 0.75rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 0.25rem;
+    margin-left: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    
+    .appointment-time {
+      font-size: 0.625rem;
+      margin-left: 0.25rem;
+      opacity: 0.9;
+    }
+  `;
+  
   const buttonGroup = css`
     display: flex;
     gap: 1rem;
@@ -306,6 +372,10 @@ if (newPosition === 0 && oldPosition > 0) {
     font-size: 1rem;
     cursor: pointer;
     transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
     
     &:hover {
       background-color: #c56c6c;
@@ -339,31 +409,14 @@ if (newPosition === 0 && oldPosition > 0) {
         background-color: #8e0000;
       }
     }
-  `;
-  
-  // Notification banner style
-  const notificationBannerStyle = css`
-    background-color: #a47148;
-    color: white;
-    padding: 0.75rem;
-    border-radius: 0.5rem;
-    margin-bottom: 1rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  `;
-  
-  const bannerButton = css`
-    background-color: white;
-    color: #a47148;
-    border: none;
-    border-radius: 1rem;
-    padding: 0.5rem 1rem;
-    font-family: Poppins, sans-serif;
-    font-weight: 600;
-    font-size: 0.875rem;
-    cursor: pointer;
+    
+    &.appointment {
+      background-color: #9c27b0; /* Bright purple color */
+      
+      &:hover {
+        background-color: #7b1fa2;
+      }
+    }
   `;
   
   if (loading) {
@@ -385,7 +438,6 @@ if (newPosition === 0 && oldPosition > 0) {
         </div>
       </div>
     
-      
       {/* Queue Display */}
       <div className={card}>
         <div className={cardTitle}>Current Queue</div>
@@ -394,6 +446,8 @@ if (newPosition === 0 && oldPosition > 0) {
           currentPlayer={playerName}
           isModerator={isModerator}
           isAdmin={isAdmin}
+          isOnAppointment={isOnAppointment}
+          getAppointmentTime={getAppointmentTime}
         />
       </div>
 
@@ -405,6 +459,8 @@ if (newPosition === 0 && oldPosition > 0) {
             currentPlayer={playerName}
             isModerator={isModerator}
             isAdmin={isAdmin}
+            isOnAppointment={isOnAppointment}
+            getAppointmentTime={getAppointmentTime}
             onReorder={handleQueueReorder}
           />
         </div>
@@ -417,17 +473,57 @@ if (newPosition === 0 && oldPosition > 0) {
           <div className={playerList}>
             {outOfRotationPlayers.map((player) => (
               <div key={player} className={playerItem}>
-                <div>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
                   {player}
                   {player === playerName && ' (You)'}
                   {isAdmin(player) && <AdminBadge />}
                   {isModerator(player) && <ModeratorBadge />}
+                  {isOnAppointment(player) && (
+                    <div className={appointmentBanner}>
+                      ON APPOINTMENT
+                      <span className="appointment-time">
+                        {getAppointmentTime(player)}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
           </div>
         ) : (
           <div>No one is out of rotation</div>
+        )}
+      </div>
+      
+      {/* On Appointment Players */}
+      <div className={card}>
+        <div className={cardTitle}>On Appointment ({busyPlayers.length})</div>
+        {busyPlayers.length > 0 ? (
+          <div className={playerList}>
+            {busyPlayers.map((playerData) => {
+              const playerName = typeof playerData === 'object' ? playerData.name : playerData;
+              const timestamp = typeof playerData === 'object' ? playerData.timestamp : null;
+              
+              return (
+                <div key={playerName} className={playerItem}>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    {playerName}
+                    {playerName === playerName && ' (You)'}
+                    {isAdmin(playerName) && <AdminBadge />}
+                    {isModerator(playerName) && <ModeratorBadge />}
+                    <div className={appointmentBanner}>
+                      ON APPOINTMENT
+                      <span className="appointment-time">
+                        {timestamp}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div>No one is on appointment</div>
         )}
       </div>
       
@@ -453,6 +549,14 @@ if (newPosition === 0 && oldPosition > 0) {
           disabled={playerStatus === 'outOfRotation'}
         >
           Out
+        </button>
+        {/* New Appointment Button with Calendar Icon */}
+        <button
+          className={`${button} appointment`}
+          onClick={handleOnAppointment}
+          disabled={playerStatus === 'onAppointment'}
+        >
+          <span role="img" aria-label="Calendar">📅</span> Appointment
         </button>
         <button
           className={`${button} danger`}
