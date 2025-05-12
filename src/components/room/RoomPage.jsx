@@ -257,6 +257,38 @@ const addHistoryEntry = async (action, player = playerName, details = null) => {
     addHistoryEntry('wentOnAppointment', playerName, { timestamp });
   };
 
+  // Resets the history at 8:01pm
+const resetHistoryAtEndOfDay = async () => {
+  try {
+    const now = new Date();
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    
+    // Check if it's 8:01pm (20 hours, 1 minute in 24-hour format)
+    if (hours === 20 && minutes >= 1 && minutes < 6) {
+      console.log("It's 8:01pm - resetting history");
+      
+      // First archive current history if it exists and has entries
+      if (history.length > 0) {
+        await saveHistoryToArchive();
+      }
+      
+      // Then clear history
+      const roomRef = doc(db, 'rooms', roomId);
+      await updateDoc(roomRef, {
+        history: []
+      });
+      
+      console.log("History has been reset for the next day");
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error("Error resetting history:", error);
+    return false;
+  }
+};
+
   // Handle skipping turn but staying in queue
   const handleSkipTurn = async () => {
     const roomRef = doc(db, 'rooms', roomId);
@@ -514,7 +546,20 @@ useEffect(() => {
   
   return () => clearInterval(interval);
 }, [shiftEnd, navigate, history]);
+
+// this is for the history restting at 8:01pm
+useEffect(() => {
+  // Check once on component mount
+  resetHistoryAtEndOfDay();
   
+  // Then check every 5 minutes
+  const interval = setInterval(() => {
+    resetHistoryAtEndOfDay();
+  }, 5 * 60 * 1000); // 5 minutes in milliseconds
+  
+  return () => clearInterval(interval);
+}, []);
+
   // Styling
   const container = css`
     min-height: 100vh;
