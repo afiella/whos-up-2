@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { css } from '@emotion/css';
 import { db } from '../../firebase/config';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
-import ActivityHistory from '../room/ActivityHistory';
+import ActivityHistory from '../../components/room/ActivityHistory';
 
 export default function HistoryArchive() {
   const [historicalRecords, setHistoricalRecords] = useState([]);
