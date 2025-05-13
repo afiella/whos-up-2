@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { db } from '../../firebase/config';
 import { onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import HistoryArchive from '../admin/HistoryArchive';
+import AdminNav from '../../components/admin/AdminNav';
 
 
 export default function AdminDashboard() {
@@ -645,6 +646,7 @@ export default function AdminDashboard() {
         ))}
       </div>
       <HistoryArchive />
+      <AdminNav />
     </div>
   );
 }

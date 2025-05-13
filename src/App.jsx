@@ -13,6 +13,9 @@ import AshlandPage from './pages/rooms/AshlandPage';
 import { AuthProvider } from './context/AuthContext';
 import { initializeRooms } from './firebase/initializeFirestore';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import QueueAnalytics from './pages/admin/QueueAnalytics';
+import PlayerManagement from './pages/admin/PlayerManagement';
+
 
 export default function App() {
   // Initialize Firestore collections on app start
@@ -44,6 +47,22 @@ export default function App() {
             element={
               <ProtectedRoute adminOnly={true}>
                 <AdminDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/analytics" 
+            element={
+              <ProtectedRoute adminOnly={true}>
+                <QueueAnalytics />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/players" 
+            element={
+              <ProtectedRoute adminOnly={true}>
+                <PlayerManagement />
               </ProtectedRoute>
             } 
           />
