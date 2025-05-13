@@ -464,7 +464,16 @@ export default function AdminDashboard() {
     >
       <span role="img" aria-label="Players">👥</span> Manage Players
     </button>
-    <div 
+          <button 
+            className={secondaryButton} 
+            onClick={() => setShowModeratorForm(!showModeratorForm)}
+          >
+            {showModeratorForm ? 'Hide Moderator Form' : 'Add Moderator'}
+          </button>
+          <button className={button} onClick={handleLogout}>
+            Logout
+          </button>
+          <div 
   style={{ 
     display: 'flex', 
     flexWrap: 'wrap', 
@@ -500,16 +509,6 @@ export default function AdminDashboard() {
     <span role="img" aria-label="Settings">⚙️</span> Settings
   </button>
 </div>
-
-          <button 
-            className={secondaryButton} 
-            onClick={() => setShowModeratorForm(!showModeratorForm)}
-          >
-            {showModeratorForm ? 'Hide Moderator Form' : 'Add Moderator'}
-          </button>
-          <button className={button} onClick={handleLogout}>
-            Logout
-          </button>
         </div>
         
       </div>
