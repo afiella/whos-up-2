@@ -15,7 +15,8 @@ import { initializeRooms } from './firebase/initializeFirestore';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import QueueAnalytics from './pages/admin/QueueAnalytics';
 import PlayerManagement from './pages/admin/PlayerManagement';
-
+import HistoryArchive from './pages/admin/HistoryArchive';
+import Settings from './pages/admin/Settings';
 
 export default function App() {
   // Initialize Firestore collections on app start
@@ -58,6 +59,23 @@ export default function App() {
               </ProtectedRoute>
             } 
           />
+          <Route 
+  path="/admin/history" 
+  element={
+    <ProtectedRoute adminOnly={true}>
+      <HistoryArchive />
+    </ProtectedRoute>
+  } 
+/>
+
+<Route 
+  path="/admin/settings" 
+  element={
+    <ProtectedRoute adminOnly={true}>
+      <Settings />
+    </ProtectedRoute>
+  } 
+/>
           <Route 
             path="/admin/players" 
             element={

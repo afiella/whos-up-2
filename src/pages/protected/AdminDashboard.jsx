@@ -475,6 +475,33 @@ export default function AdminDashboard() {
           </button>
         </div>
       </div>
+      <div style={{ 
+  display: 'flex', 
+  flexWrap: 'wrap', 
+  gap: '1rem', 
+  marginBottom: '2rem'
+}}>
+  <button 
+    className={secondaryButton} // use your button style
+    onClick={() => navigate('/admin/players')}
+  >
+    <span role="img" aria-label="Players">👥</span> Manage Players
+  </button>
+  
+  <button 
+    className={secondaryButton}
+    onClick={() => navigate('/admin/history')}
+  >
+    <span role="img" aria-label="History">📚</span> History Archive
+  </button>
+  
+  <button 
+    className={secondaryButton}
+    onClick={() => navigate('/admin/settings')}
+  >
+    <span role="img" aria-label="Settings">⚙️</span> Settings
+  </button>
+</div>
       
       {/* Moderator Management Section */}
       {showModeratorForm && (
