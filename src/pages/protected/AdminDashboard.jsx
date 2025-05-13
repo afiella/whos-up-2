@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { db } from '../../firebase/config';
 import { onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import HistoryArchive from '../admin/HistoryArchive';
-import AdminNav from '../../components/admin/AdminNav';
+import AdminNav from '../admin/AdminNav';
 
 
 export default function AdminDashboard() {
