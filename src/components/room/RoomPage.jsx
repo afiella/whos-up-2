@@ -82,25 +82,28 @@ export default function RoomPage({ roomId, roomName }) {
       
       // Check if it's 8:01pm (20 hours, 1 minute in 24-hour format)
       if (hours === 20 && minutes >= 1 && minutes < 6) {
-        console.log("It's 8:01pm - resetting history");
+        console.log("It's 8:01pm - resetting room data");
         
         // First archive current history if it exists and has entries
         if (history.length > 0) {
           await saveHistoryToArchive();
         }
         
-        // Then clear history
+        // Then clear ALL room data, not just history
         const roomRef = doc(db, 'rooms', roomId);
         await updateDoc(roomRef, {
-          history: []
+          history: [],
+          queue: [],
+          outOfRotationPlayers: [],
+          busyPlayers: []
         });
         
-        console.log("History has been reset for the next day");
+        console.log("Room has been completely reset for the next day");
         return true;
       }
       return false;
     } catch (error) {
-      console.error("Error resetting history:", error);
+      console.error("Error resetting room:", error);
       return false;
     }
   };

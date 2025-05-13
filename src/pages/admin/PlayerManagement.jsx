@@ -4,6 +4,9 @@ import { css } from '@emotion/css';
 import { db } from '../../firebase/config';
 import { collection, getDocs, doc, updateDoc, arrayRemove, deleteField } from 'firebase/firestore';
 
+
+
+
 export default function PlayerManagement() {
   const [rooms, setRooms] = useState({
     bh: { queue: [], outOfRotationPlayers: [], busyPlayers: [] },
@@ -141,23 +144,25 @@ export default function PlayerManagement() {
   };
   
   // Handle clearing a room's queue entirely
-  const handleClearQueue = async (roomId) => {
-    if (window.confirm(`Are you sure you want to clear the entire queue for ${roomId} room?`)) {
+  const handleClearRoom = async (roomId) => {
+    if (window.confirm(`Are you sure you want to clear all players from ${roomDisplayNames[roomId]}?`)) {
       try {
         const roomRef = doc(db, 'rooms', roomId);
         await updateDoc(roomRef, {
-          queue: []
+          queue: [],
+          outOfRotationPlayers: [],
+          busyPlayers: []
         });
         
-        setActionMessage(`Cleared ${roomId} room queue`);
+        setActionMessage(`Cleared all players from ${roomDisplayNames[roomId]}`);
         setMessageType('success');
         
         setTimeout(() => {
           setActionMessage('');
         }, 3000);
       } catch (error) {
-        console.error("Error clearing queue:", error);
-        setActionMessage(`Error clearing queue: ${error.message}`);
+        console.error("Error clearing room:", error);
+        setActionMessage(`Error clearing room: ${error.message}`);
         setMessageType('error');
       }
     }
@@ -343,15 +348,15 @@ export default function PlayerManagement() {
       </div>
       
       <div>
-        <div className={sectionTitle}>
-          <span>Queue ({currentRoom.queue?.length || 0})</span>
-          <button 
-            className={clearButton}
-            onClick={() => handleClearQueue(selectedRoom)}
-          >
-            Clear Queue
-          </button>
-        </div>
+      <div className={sectionTitle}>
+  <span>Queue ({currentRoom.queue?.length || 0})</span>
+  <button 
+    className={clearButton}
+    onClick={() => handleClearRoom(selectedRoom)}
+  >
+    Clear All Players
+  </button>
+</div>
         
         <div className={playerList}>
           {currentRoom.queue?.length > 0 ? (
