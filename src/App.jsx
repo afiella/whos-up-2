@@ -66,6 +66,15 @@ export default function App() {
               </ProtectedRoute>
             } 
           />
+
+<Route 
+  path="/admin/players" 
+  element={
+    <ProtectedRoute adminOnly={true}>
+      <PlayerManagement />
+    </ProtectedRoute>
+  } 
+/>
           
           {/* Room routes */}
           <Route path="/bh" element={<BHPage />} />

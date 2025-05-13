@@ -536,6 +536,12 @@ export default function AdminDashboard() {
             >
               Add Moderator
             </button>
+            <button 
+  className={button} // Or whatever your button style is called
+  onClick={() => navigate('/admin/players')}
+>
+  <span role="img" aria-label="Players">👥</span> Manage Players
+</button>
           </form>
           
           {moderatorMessage && (

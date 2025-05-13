@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { css } from '@emotion/css';
 import { db } from '../../firebase/config';
 import { doc, onSnapshot, updateDoc, arrayRemove, getDoc } from 'firebase/firestore';
+import BackButton from '../../components/ui/BackButton';
 
 export default function PlayerManagement() {
   const [rooms, setRooms] = useState({
@@ -191,12 +192,19 @@ export default function PlayerManagement() {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
   `;
   
+  const header = css`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  `;
+  
   const title = css`
     font-family: Poppins, sans-serif;
     font-weight: 600;
     font-size: 1.25rem;
     color: #4b3b2b;
-    margin-bottom: 1.5rem;
+    margin: 0;
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -316,9 +324,12 @@ export default function PlayerManagement() {
   if (loading) {
     return (
       <div className={container}>
-        <h2 className={title}>
-          <span role="img" aria-label="Players">👥</span> Player Management
-        </h2>
+        <div className={header}>
+          <h2 className={title}>
+            <span role="img" aria-label="Players">👥</span> Player Management
+          </h2>
+          <BackButton label="Back to Dashboard" />
+        </div>
         <div>Loading player data...</div>
       </div>
     );
@@ -327,9 +338,12 @@ export default function PlayerManagement() {
   if (error) {
     return (
       <div className={container}>
-        <h2 className={title}>
-          <span role="img" aria-label="Players">👥</span> Player Management
-        </h2>
+        <div className={header}>
+          <h2 className={title}>
+            <span role="img" aria-label="Players">👥</span> Player Management
+          </h2>
+          <BackButton label="Back to Dashboard" />
+        </div>
         <div style={{ color: '#d67b7b' }}>{error}</div>
       </div>
     );
@@ -339,9 +353,12 @@ export default function PlayerManagement() {
   
   return (
     <div className={container}>
-      <h2 className={title}>
-        <span role="img" aria-label="Players">👥</span> Player Management
-      </h2>
+      <div className={header}>
+        <h2 className={title}>
+          <span role="img" aria-label="Players">👥</span> Player Management
+        </h2>
+        <BackButton label="Back to Dashboard" />
+      </div>
       
       {actionMessage && (
         <div className={`${messageDisplay} ${messageType}`}>
