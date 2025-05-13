@@ -451,6 +451,19 @@ export default function AdminDashboard() {
       <div className={header}>
         <h1 className={title}>Admin Command Center</h1>
         <div className={buttonGroup}>
+        <button 
+      className={button} // or whatever your button style is
+      onClick={() => navigate('/admin/players')}
+      style={{ 
+        marginRight: '1rem',
+        backgroundColor: '#8d9e78', // Use a different color to make it stand out
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem'
+      }}
+    >
+      <span role="img" aria-label="Players">👥</span> Manage Players
+    </button>
           <button 
             className={secondaryButton} 
             onClick={() => setShowModeratorForm(!showModeratorForm)}
@@ -536,12 +549,6 @@ export default function AdminDashboard() {
             >
               Add Moderator
             </button>
-            <button 
-  className={button} // Or whatever your button style is called
-  onClick={() => navigate('/admin/players')}
->
-  <span role="img" aria-label="Players">👥</span> Manage Players
-</button>
           </form>
           
           {moderatorMessage && (
