@@ -474,6 +474,43 @@ export default function AdminDashboard() {
             Logout
           </button>
         </div>
+        <div 
+  style={{ 
+    display: 'flex', 
+    flexWrap: 'wrap', 
+    gap: '1rem', 
+    marginBottom: '2rem',
+    padding: '1rem',
+    backgroundColor: 'white',
+    borderRadius: '0.5rem',
+    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)'
+  }}
+>
+  <button 
+    className={button} // Use whatever your button style is named
+    onClick={() => navigate('/admin/players')}
+    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+  >
+    <span role="img" aria-label="Players">👥</span> Manage Players
+  </button>
+  
+  <button 
+    className={button}
+    onClick={() => navigate('/admin/history')}
+    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+  >
+    <span role="img" aria-label="History">📚</span> History Archive
+  </button>
+  
+  <button 
+    className={button}
+    onClick={() => navigate('/admin/settings')}
+    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+  >
+    <span role="img" aria-label="Settings">⚙️</span> Settings
+  </button>
+</div>
+
       </div>
       <div style={{ 
   display: 'flex', 
@@ -481,26 +518,7 @@ export default function AdminDashboard() {
   gap: '1rem', 
   marginBottom: '2rem'
 }}>
-  <button 
-    className={secondaryButton} // use your button style
-    onClick={() => navigate('/admin/players')}
-  >
-    <span role="img" aria-label="Players">👥</span> Manage Players
-  </button>
-  
-  <button 
-    className={secondaryButton}
-    onClick={() => navigate('/admin/history')}
-  >
-    <span role="img" aria-label="History">📚</span> History Archive
-  </button>
-  
-  <button 
-    className={secondaryButton}
-    onClick={() => navigate('/admin/settings')}
-  >
-    <span role="img" aria-label="Settings">⚙️</span> Settings
-  </button>
+
 </div>
       
       {/* Moderator Management Section */}
