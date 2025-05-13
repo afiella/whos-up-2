@@ -2,10 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { css } from '@emotion/css';
 import { db } from '../../firebase/config';
-import { collection, getDocs, doc, updateDoc, arrayRemove, deleteField } from 'firebase/firestore';
-
-
-
+import { doc, onSnapshot, updateDoc, arrayRemove, getDoc } from 'firebase/firestore';
 
 export default function PlayerManagement() {
   const [rooms, setRooms] = useState({
@@ -28,13 +25,14 @@ export default function PlayerManagement() {
         
         const roomsData = {};
         
+        // Fetch data for each room
         for (const roomId of ['bh', '59', 'ashland']) {
-          const roomDoc = await getDocs(collection(db, 'rooms'));
-          roomDoc.forEach(doc => {
-            if (doc.id === roomId) {
-              roomsData[roomId] = doc.data();
-            }
-          });
+          const roomDoc = await getDoc(doc(db, 'rooms', roomId));
+          if (roomDoc.exists()) {
+            roomsData[roomId] = roomDoc.data();
+          } else {
+            roomsData[roomId] = { queue: [], outOfRotationPlayers: [], busyPlayers: [] };
+          }
         }
         
         setRooms(roomsData);
@@ -48,11 +46,12 @@ export default function PlayerManagement() {
     
     fetchRoomData();
     
-    // Set up real-time updates
-    const roomIds = ['bh', '59', 'ashland'];
-    const unsubscribes = roomIds.map(roomId => {
+    // Set up real-time updates for each room
+    const unsubscribes = [];
+    
+    for (const roomId of ['bh', '59', 'ashland']) {
       const roomRef = doc(db, 'rooms', roomId);
-      return roomRef.onSnapshot(doc => {
+      const unsubscribe = onSnapshot(roomRef, (doc) => {
         if (doc.exists()) {
           setRooms(prev => ({
             ...prev,
@@ -60,7 +59,9 @@ export default function PlayerManagement() {
           }));
         }
       });
-    });
+      
+      unsubscribes.push(unsubscribe);
+    }
     
     return () => {
       unsubscribes.forEach(unsubscribe => unsubscribe());
@@ -82,7 +83,7 @@ export default function PlayerManagement() {
         setActionMessage('');
       }, 3000);
     } catch (error) {
-      console.error("Error removing player:", error);
+      console.error("Error removing player from queue:", error);
       setActionMessage(`Error removing player: ${error.message}`);
       setMessageType('error');
     }
@@ -103,7 +104,7 @@ export default function PlayerManagement() {
         setActionMessage('');
       }, 3000);
     } catch (error) {
-      console.error("Error removing player:", error);
+      console.error("Error removing player from out of rotation:", error);
       setActionMessage(`Error removing player: ${error.message}`);
       setMessageType('error');
     }
@@ -112,38 +113,51 @@ export default function PlayerManagement() {
   // Handle player removal from busy (appointment) list
   const handleRemoveFromAppointment = async (roomId, playerData) => {
     try {
-      const roomRef = doc(db, 'rooms', roomId);
-      
-      // Handle both string and object formats
-      const playerName = typeof playerData === 'object' ? playerData.name : playerData;
-      
       // Get current busyPlayers
-      const busyPlayers = rooms[roomId]?.busyPlayers || [];
-      const updatedBusyPlayers = busyPlayers.filter(item => {
-        if (typeof item === 'object') {
-          return item.name !== playerName;
+      const roomRef = doc(db, 'rooms', roomId);
+      const roomSnapshot = await getDoc(roomRef);
+      
+      if (roomSnapshot.exists()) {
+        const currentBusyPlayers = roomSnapshot.data().busyPlayers || [];
+        let playerName;
+        
+        // Handle both string and object formats
+        if (typeof playerData === 'object') {
+          playerName = playerData.name;
+        } else {
+          playerName = playerData;
         }
-        return item !== playerName;
-      });
-      
-      await updateDoc(roomRef, {
-        busyPlayers: updatedBusyPlayers
-      });
-      
-      setActionMessage(`Removed ${playerName} from ${roomId} appointments`);
-      setMessageType('success');
-      
-      setTimeout(() => {
-        setActionMessage('');
-      }, 3000);
+        
+        // Filter out the player to remove
+        const updatedBusyPlayers = currentBusyPlayers.filter(item => {
+          if (typeof item === 'object') {
+            return item.name !== playerName;
+          }
+          return item !== playerName;
+        });
+        
+        // Update with new array
+        await updateDoc(roomRef, {
+          busyPlayers: updatedBusyPlayers
+        });
+        
+        setActionMessage(`Removed ${playerName} from ${roomId} appointments`);
+        setMessageType('success');
+        
+        setTimeout(() => {
+          setActionMessage('');
+        }, 3000);
+      } else {
+        throw new Error("Room not found");
+      }
     } catch (error) {
-      console.error("Error removing player:", error);
+      console.error("Error removing player from appointment:", error);
       setActionMessage(`Error removing player: ${error.message}`);
       setMessageType('error');
     }
   };
   
-  // Handle clearing a room's queue entirely
+  // Handle clearing a room entirely
   const handleClearRoom = async (roomId) => {
     if (window.confirm(`Are you sure you want to clear all players from ${roomDisplayNames[roomId]}?`)) {
       try {
@@ -348,15 +362,15 @@ export default function PlayerManagement() {
       </div>
       
       <div>
-      <div className={sectionTitle}>
-  <span>Queue ({currentRoom.queue?.length || 0})</span>
-  <button 
-    className={clearButton}
-    onClick={() => handleClearRoom(selectedRoom)}
-  >
-    Clear All Players
-  </button>
-</div>
+        <div className={sectionTitle}>
+          <span>Queue ({currentRoom.queue?.length || 0})</span>
+          <button 
+            className={clearButton}
+            onClick={() => handleClearRoom(selectedRoom)}
+          >
+            Clear All Players
+          </button>
+        </div>
         
         <div className={playerList}>
           {currentRoom.queue?.length > 0 ? (
@@ -370,7 +384,7 @@ export default function PlayerManagement() {
                   className={actionButton}
                   onClick={() => handleRemoveFromQueue(selectedRoom, player)}
                 >
-                  Remove
+                  Remove from Queue
                 </button>
               </div>
             ))
@@ -394,7 +408,7 @@ export default function PlayerManagement() {
                   className={actionButton}
                   onClick={() => handleRemoveFromOutOfRotation(selectedRoom, player)}
                 >
-                  Remove
+                  Remove from Out
                 </button>
               </div>
             ))
@@ -434,7 +448,7 @@ export default function PlayerManagement() {
                     className={actionButton}
                     onClick={() => handleRemoveFromAppointment(selectedRoom, playerData)}
                   >
-                    Remove
+                    Remove from Appointment
                   </button>
                 </div>
               );
