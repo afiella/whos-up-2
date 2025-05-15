@@ -1,53 +1,94 @@
 // src/components/room/QueueDisplay.jsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { css } from '@emotion/css';
 import ModeratorBadge from '../ui/ModeratorBadge';
 import AdminBadge from '../ui/AdminBadge';
 
 export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmin, isOnAppointment, getAppointmentTime }) {
-  const container = css`
-    display: flex;
-    align-items: center;
-    gap: 1rem; /* Smaller gap on mobile */
-    padding: 1rem;
-    overflow-x: auto;
-    position: relative;
-    min-height: 120px; /* Ensure minimum height for container */
-    
-    @media (min-width: 768px) {
-      gap: 2rem; /* Original gap on desktop */
-      padding: 2rem;
-    }
-  `;
+  // State to track which player is in center focus (default to first player)
+  const [centerIndex, setCenterIndex] = useState(0);
   
-  const playerCircle = css`
-    width: min(80px, 22vw); /* Responsive size that won't get too small */
-    height: min(80px, 22vw); /* Same as width to maintain circle shape */
-    min-width: 70px; /* Minimum size to prevent too small circles */
-    min-height: 70px;
-    border-radius: 50%;
+  // Reset center index when queue changes
+  useEffect(() => {
+    setCenterIndex(0);
+  }, [queue.length]);
+  
+  // Handle rotation
+  const rotateLeft = () => {
+    if (queue.length > 1) {
+      setCenterIndex((prevIndex) => 
+        prevIndex === 0 ? queue.length - 1 : prevIndex - 1
+      );
+    }
+  };
+  
+  const rotateRight = () => {
+    if (queue.length > 1) {
+      setCenterIndex((prevIndex) => 
+        (prevIndex + 1) % queue.length
+      );
+    }
+  };
+  
+  // Container styles
+  const container = css`
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    font-family: Poppins, sans-serif;
+    min-height: 320px;
+    padding: 1rem;
+    margin: 2rem 0;
+  `;
+  
+  // Center plate styles (larger)
+  const centerPlate = css`
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    background-color: #d67b7b;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     position: relative;
-    flex-shrink: 0; /* Prevent circle from shrinking */
-    
-    &.first {
-      width: min(100px, 28vw);
-      height: min(100px, 28vw);
-      min-width: 85px;
-      min-height: 85px;
-      background-color: #d67b7b;
-      color: white;
-      font-size: 1rem;
-    }
-    
-    &.waiting {
-      background-color: #eacdca;
-      color: #4b3b2b;
-    }
+    margin: 2rem auto;
+    z-index: 10;
+    padding: 1rem;
+    text-align: center;
+  `;
+  
+  // Semi-circle of plates
+  const plateCircle = css`
+    position: absolute;
+    width: 100%;
+    height: 180px;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+  `;
+  
+  // Individual plate in carousel
+  const plate = css`
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background-color: #eacdca;
+    color: #4b3b2b;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: absolute;
+    padding: 0.5rem;
+    text-align: center;
+    transition: all 0.3s ease;
     
     &.current {
       border: 3px solid #a47148;
@@ -56,56 +97,59 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     &.on-appointment {
       border: 3px solid #9c27b0;
     }
-    
-    @media (min-width: 768px) {
-      width: 120px; /* Original size on desktop */
-      height: 120px;
-      
-      &.first {
-        width: 150px;
-        height: 150px;
-        font-size: 1.25rem;
-      }
-      
-      &.current {
-        border: 4px solid #a47148;
-      }
-      
-      &.on-appointment {
-        border: 4px solid #9c27b0;
-      }
-    }
   `;
   
-  const positionBadge = css`
-    position: absolute;
-    top: -10px;
+  // Arrow button styles
+  const arrowButton = css`
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
     background-color: #a47148;
     color: white;
-    border-radius: 1rem;
-    padding: 0.25rem 0.75rem;
-    font-size: 0.75rem;
-    font-weight: 600;
+    border: none;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    bottom: 0;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.2s;
     
-    @media (min-width: 768px) {
-      font-size: 0.875rem;
+    &:hover {
+      background-color: #8a5d3b;
+    }
+    
+    &:disabled {
+      background-color: #d3a7a7;
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    &.left {
+      left: 15%;
+    }
+    
+    &.right {
+      right: 15%;
     }
   `;
   
+  // Player name styles
   const playerName = css`
     font-weight: 600;
-    text-align: center;
-    margin-bottom: 0.25rem;
     font-size: 0.85rem;
     word-break: break-word;
     max-width: 100%;
-    padding: 0 5px;
+    font-family: Poppins, sans-serif;
     
     @media (min-width: 768px) {
       font-size: 1rem;
     }
   `;
   
+  // You badge styles
   const youBadge = css`
     font-size: 0.7rem;
     color: #a47148;
@@ -113,15 +157,6 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     
     @media (min-width: 768px) {
       font-size: 0.75rem;
-    }
-  `;
-  
-  const arrow = css`
-    font-size: 1.5rem;
-    color: #d67b7b;
-    
-    @media (min-width: 768px) {
-      font-size: 2rem;
     }
   `;
   
@@ -158,6 +193,7 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     }
   `;
   
+  // Empty state message
   if (queue.length === 0) {
     return (
       <div style={{ textAlign: 'center', padding: '2rem' }}>
@@ -166,36 +202,122 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     );
   }
   
+  // Get the player for center position
+  const centerPlayer = queue[centerIndex];
+  
+  // Calculate positions for plates in semi-circle
+  const getPlatePosition = (index, totalPlates) => {
+    // If only showing one player, don't calculate positions
+    if (queue.length <= 1) return {};
+    
+    const radius = 140; // Radius of the semi-circle
+    
+    // We'll display max 5 additional plates (or less if not enough players)
+    const maxVisiblePlates = Math.min(5, queue.length - 1);
+    
+    // Get the players before and after the center player, wrapping around the queue
+    const plateIndices = [];
+    for (let i = -Math.floor(maxVisiblePlates / 2); i <= Math.ceil(maxVisiblePlates / 2); i++) {
+      if (i === 0) continue; // Skip the center player
+      
+      let plateIndex = (centerIndex + i + queue.length) % queue.length;
+      plateIndices.push(plateIndex);
+    }
+    
+    // If this plate isn't in our visible indices, don't show it
+    if (!plateIndices.includes(index)) return { display: 'none' };
+    
+    // Calculate position in the semi-circle
+    const visibleIndex = plateIndices.indexOf(index);
+    const angleRange = 180; // Semi-circle = 180 degrees
+    const angleStep = angleRange / (maxVisiblePlates + 1);
+    const angle = (visibleIndex + 1) * angleStep;
+    const angleRadians = (angle * Math.PI) / 180;
+    
+    // Position on the semi-circle (top half)
+    const left = `calc(50% + ${radius * Math.sin(angleRadians)}px)`;
+    const top = `calc(${radius * (1 - Math.cos(angleRadians))}px)`;
+    
+    return { left, top };
+  };
+  
   return (
     <div className={container}>
-      {queue.map((player, index) => (
-        <React.Fragment key={player}>
-          <div 
-            className={`${playerCircle} ${
-              index === 0 ? 'first' : 'waiting'
-            } ${player === currentPlayer ? 'current' : ''} ${
-              isOnAppointment && isOnAppointment(player) ? 'on-appointment' : ''
-            }`}
-          >
-            {index === 0 && <div className={positionBadge}>NEXT</div>}
-            <div className={playerName}>{player}</div>
-            {player === currentPlayer && <div className={youBadge}>YOU</div>}
-            {isAdmin && typeof isAdmin === 'function' && isAdmin(player) && <AdminBadge />}
-            {isModerator && typeof isModerator === 'function' && isModerator(player) && <ModeratorBadge />}
-            
-            {/* Show appointment banner if player is on appointment */}
-            {isOnAppointment && getAppointmentTime && isOnAppointment(player) && (
-              <div className={appointmentBanner}>
-                ON APPOINTMENT
-                <span className="appointment-time">
-                  {getAppointmentTime(player)}
-                </span>
-              </div>
-            )}
+      {/* Semi-circle of plates */}
+      <div className={plateCircle}>
+        {queue.map((player, index) => {
+          if (index === centerIndex) return null; // Center player rendered separately
+          
+          return (
+            <div
+              key={player}
+              className={`${plate} ${
+                player === currentPlayer ? 'current' : ''
+              } ${
+                isOnAppointment && isOnAppointment(player) ? 'on-appointment' : ''
+              }`}
+              style={getPlatePosition(index, queue.length)}
+            >
+              <div className={playerName}>{player.length > 8 ? player.substring(0, 8) + '...' : player}</div>
+              {player === currentPlayer && <div className={youBadge}>YOU</div>}
+              {isAdmin && typeof isAdmin === 'function' && isAdmin(player) && <AdminBadge />}
+              {isModerator && typeof isModerator === 'function' && isModerator(player) && <ModeratorBadge />}
+              
+              {/* Appointment indicator for smaller plates */}
+              {isOnAppointment && getAppointmentTime && isOnAppointment(player) && (
+                <div className={appointmentBanner}>
+                  ON APT
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      
+      {/* Center plate */}
+      <div 
+        className={`${centerPlate} ${
+          centerPlayer === currentPlayer ? 'current' : ''
+        } ${
+          isOnAppointment && isOnAppointment(centerPlayer) ? 'on-appointment' : ''
+        }`}
+      >
+        <div style={{ position: 'absolute', top: '-20px', backgroundColor: '#a47148', color: 'white', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem' }}>
+          NEXT
+        </div>
+        <div className={playerName} style={{ fontSize: '1.25rem' }}>{centerPlayer}</div>
+        {centerPlayer === currentPlayer && <div className={youBadge} style={{ fontSize: '0.875rem' }}>YOU</div>}
+        {isAdmin && typeof isAdmin === 'function' && isAdmin(centerPlayer) && <AdminBadge />}
+        {isModerator && typeof isModerator === 'function' && isModerator(centerPlayer) && <ModeratorBadge />}
+        
+        {/* Appointment indicator for center plate */}
+        {isOnAppointment && getAppointmentTime && isOnAppointment(centerPlayer) && (
+          <div className={appointmentBanner} style={{ fontSize: '0.7rem', padding: '0.2rem 0.6rem' }}>
+            ON APPOINTMENT
+            <span className="appointment-time">
+              {getAppointmentTime(centerPlayer)}
+            </span>
           </div>
-          {index < queue.length - 1 && <div className={arrow}>→</div>}
-        </React.Fragment>
-      ))}
+        )}
+      </div>
+      
+      {/* Rotation arrows */}
+      <button 
+        className={`${arrowButton} left`} 
+        onClick={rotateLeft}
+        disabled={queue.length <= 1}
+        aria-label="Rotate left"
+      >
+        &#8592;
+      </button>
+      <button 
+        className={`${arrowButton} right`} 
+        onClick={rotateRight}
+        disabled={queue.length <= 1}
+        aria-label="Rotate right"
+      >
+        &#8594;
+      </button>
     </div>
   );
 }

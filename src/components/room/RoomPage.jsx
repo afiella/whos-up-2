@@ -621,18 +621,19 @@ export default function RoomPage({ roomId, roomName }) {
   `;
   
   const buttonGroup = css`
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background-color: #fff8f0;
-    padding: 1rem;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-    justify-content: center;
-  `;
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: #fff8f0;
+  padding: 1rem;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  justify-content: center;
+  z-index: 100; /* Ensure buttons are above other content */
+`;
   
   const button = css`
     background-color: #d67b7b;
