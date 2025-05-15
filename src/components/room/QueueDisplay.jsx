@@ -39,7 +39,7 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
   const container = css`
     position: relative;
     width: 100%;
-    height: 500px;
+    height: 450px;
     padding: 1rem;
     margin: 1rem 0;
     display: flex;
@@ -62,7 +62,7 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     justify-content: center;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     position: absolute;
-    top: 100px;
+    top: 80px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 20;
@@ -78,19 +78,19 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
   // Carousel container (rotary wheel)
   const carouselWheel = css`
     position: absolute;
-    width: 300px;
-    height: 300px;
+    width: 250px;
+    height: 250px;
     top: 180px;
     left: 50%;
-    margin-left: -150px;
+    margin-left: -125px;
     transition: transform 0.5s ease;
     transform: rotate(${rotationAngle}deg);
   `;
   
   // Individual plate in carousel
   const plate = css`
-    width: 80px;
-    height: 80px;
+    width: 70px;
+    height: 70px;
     border-radius: 50%;
     background-color: #eacdca;
     color: #4b3b2b;
@@ -102,12 +102,12 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     position: absolute;
     left: 50%;
     top: 50%;
-    margin-left: -40px;
-    margin-top: -40px;
+    margin-left: -35px;
+    margin-top: -35px;
     padding: 0.5rem;
     text-align: center;
     font-family: Poppins, sans-serif;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 600;
     
     &.current {
@@ -173,7 +173,7 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     align-items: center;
     justify-content: center;
     position: absolute;
-    bottom: 50px;
+    bottom: 30px;
     cursor: pointer;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     transition: background-color 0.2s;
@@ -190,11 +190,11 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     }
     
     &.left {
-      left: 20%;
+      left: 25%;
     }
     
     &.right {
-      right: 20%;
+      right: 25%;
     }
   `;
   
@@ -245,8 +245,8 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     const angleInDegrees = (index * 360) / queue.length;
     const angleInRadians = (angleInDegrees * Math.PI) / 180;
     
-    // Radius of the circle (half the container width minus half the plate width)
-    const radius = 120;
+    // Radius of the circle - SMALLER to bring circles closer together
+    const radius = 90; // Reduced from 120 to make circles closer together
     
     // Calculate position using sine and cosine
     const x = radius * Math.sin(angleInRadians);
@@ -328,7 +328,7 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap'
               }}>
-                {player.length > 10 ? player.substring(0, 8) + '...' : player}
+                {player.length > 8 ? player.substring(0, 6) + '...' : player}
               </div>
               
               {/* Badge indicators inside the plate and rotated to stay upright */}
