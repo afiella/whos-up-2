@@ -632,7 +632,7 @@ export default function RoomPage({ roomId, roomName }) {
   padding: 1rem;
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
   justify-content: center;
-  z-index: 100; /* Ensure buttons are above other content */
+  z-index: 100;
 `;
   
   const button = css`
