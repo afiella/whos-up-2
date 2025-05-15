@@ -5,18 +5,22 @@ import ModeratorBadge from '../ui/ModeratorBadge';
 import AdminBadge from '../ui/AdminBadge';
 
 export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmin, isOnAppointment, getAppointmentTime }) {
-  // State to track which player is in center focus (default to first player)
-  const [centerIndex, setCenterIndex] = useState(0);
+  // State to track rotation angle
+  const [rotationAngle, setRotationAngle] = useState(0);
+  // Track which player is at the top (first in queue)
+  const [topPlayerIndex, setTopPlayerIndex] = useState(0);
   
-  // Reset center index when queue changes
+  // Reset rotation when queue changes
   useEffect(() => {
-    setCenterIndex(0);
+    setRotationAngle(0);
+    setTopPlayerIndex(0);
   }, [queue.length]);
   
   // Handle rotation
   const rotateLeft = () => {
     if (queue.length > 1) {
-      setCenterIndex((prevIndex) => 
+      setRotationAngle(prevAngle => prevAngle + (360 / queue.length));
+      setTopPlayerIndex(prevIndex => 
         prevIndex === 0 ? queue.length - 1 : prevIndex - 1
       );
     }
@@ -24,7 +28,8 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
   
   const rotateRight = () => {
     if (queue.length > 1) {
-      setCenterIndex((prevIndex) => 
+      setRotationAngle(prevAngle => prevAngle - (360 / queue.length));
+      setTopPlayerIndex(prevIndex => 
         (prevIndex + 1) % queue.length
       );
     }
@@ -34,13 +39,17 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
   const container = css`
     position: relative;
     width: 100%;
-    min-height: 350px;
+    height: 380px;
     padding: 1rem;
     margin: 1rem 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     overflow: hidden;
   `;
   
-  // Center plate styles (larger)
+  // Center plate (for first player)
   const centerPlate = css`
     width: 150px;
     height: 150px;
@@ -53,13 +62,12 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     justify-content: center;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     position: absolute;
-    top: 150px;
+    top: 20px;
     left: 50%;
     transform: translateX(-50%);
-    z-index: 10;
+    z-index: 20;
     padding: 1rem;
     text-align: center;
-    transition: all 0.3s ease;
     
     &.current {
       border: 3px solid #a47148;
@@ -70,14 +78,14 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     }
   `;
   
-  // Carousel container
-  const carousel = css`
+  // Carousel container (rotary wheel)
+  const carouselWheel = css`
     position: relative;
-    height: 100px;
-    margin-top: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    width: 280px;
+    height: 280px;
+    margin-top: 100px;
+    transition: transform 0.5s ease;
+    transform: rotate(${rotationAngle}deg);
   `;
   
   // Individual plate in carousel
@@ -95,7 +103,7 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     position: absolute;
     padding: 0.5rem;
     text-align: center;
-    transition: all 0.3s ease;
+    transform-origin: center 140px; /* This ensures rotation around the wheel */
     
     &.current {
       border: 3px solid #a47148;
@@ -123,7 +131,7 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     cursor: pointer;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     transition: background-color 0.2s;
-    z-index: 20;
+    z-index: 30;
     
     &:hover {
       background-color: #8a5d3b;
@@ -147,13 +155,14 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
   // Player name styles
   const playerName = css`
     font-weight: 600;
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     word-break: break-word;
     max-width: 100%;
     font-family: Poppins, sans-serif;
+    transform: rotate(${-rotationAngle}deg); /* Counter-rotate to keep text upright */
     
     @media (min-width: 768px) {
-      font-size: 1rem;
+      font-size: 0.9rem;
     }
   `;
   
@@ -162,6 +171,7 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     font-size: 0.7rem;
     color: #a47148;
     font-weight: 600;
+    transform: rotate(${-rotationAngle}deg); /* Counter-rotate to keep badge upright */
     
     @media (min-width: 768px) {
       font-size: 0.75rem;
@@ -173,7 +183,7 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     position: absolute;
     bottom: -8px;
     left: 50%;
-    transform: translateX(-50%);
+    transform: translateX(-50%) rotate(${-rotationAngle}deg); /* Counter-rotate */
     background-color: #9c27b0;
     color: white;
     font-family: Poppins, sans-serif;
@@ -210,57 +220,49 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     );
   }
   
-  // Get the player for center position
-  const centerPlayer = queue[centerIndex];
-  
-  // Calculate positions for plates in horizontal carousel
-  const getPlatePosition = (index, totalPlates) => {
-    // If only showing one player, don't calculate positions
-    if (queue.length <= 1) return { display: 'none' };
+  // Calculate plate positions in a circle
+  const getPlateStyle = (index) => {
+    const angleInRadians = (index * 2 * Math.PI) / queue.length;
+    const transform = `rotate(${(index * 360) / queue.length}deg) translateY(-140px)`;
     
-    // Determine visibility and position
-    const visiblePlatesCount = Math.min(5, queue.length - 1); // Max 5 visible plates excluding center
-    
-    let relativePosition = index - centerIndex;
-    if (relativePosition < 0) relativePosition += queue.length;
-    if (relativePosition > 0 && relativePosition > Math.floor(queue.length / 2)) {
-      relativePosition = relativePosition - queue.length;
-    }
-    
-    // Hide plates that are too far from the center
-    const maxDistance = Math.floor(visiblePlatesCount / 2);
-    if (Math.abs(relativePosition) > maxDistance) return { display: 'none' };
-    
-    // Calculate horizontal position
-    const baseWidth = 120; // Space between plates
-    const xPosition = relativePosition * baseWidth;
-    
-    // Add curved effect - plates further from the center appear slightly higher
-    const yAdjustment = Math.abs(relativePosition) * 10;
-    
-    // Make plates smaller the further they are from center
-    const scale = 1 - Math.abs(relativePosition) * 0.15;
-    
-    // Calculate z-index - closer to center = higher z-index
-    const zIndex = 5 - Math.abs(relativePosition);
-    
-    return {
-      left: `calc(50% + ${xPosition}px)`,
-      top: `${50 - yAdjustment}px`,
-      transform: `translateX(-50%) scale(${scale})`,
-      opacity: 1 - Math.abs(relativePosition) * 0.2, // Fade out plates further from center
-      zIndex
-    };
+    return { transform };
   };
   
   return (
     <div className={container}>
-      {/* Carousel of plates */}
-      <div className={carousel}>
+      {/* Top/center plate (first player) */}
+      <div 
+        className={`${centerPlate} ${
+          queue[topPlayerIndex] === currentPlayer ? 'current' : ''
+        } ${
+          isOnAppointment && isOnAppointment(queue[topPlayerIndex]) ? 'on-appointment' : ''
+        }`}
+      >
+        <div style={{ position: 'absolute', top: '-20px', backgroundColor: '#a47148', color: 'white', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem' }}>
+          NEXT
+        </div>
+        <div className={playerName} style={{ fontSize: '1.25rem', transform: 'none' }}>
+          {queue[topPlayerIndex]}
+        </div>
+        {queue[topPlayerIndex] === currentPlayer && <div className={youBadge} style={{ fontSize: '0.875rem', transform: 'none' }}>YOU</div>}
+        {isAdmin && typeof isAdmin === 'function' && isAdmin(queue[topPlayerIndex]) && <AdminBadge />}
+        {isModerator && typeof isModerator === 'function' && isModerator(queue[topPlayerIndex]) && <ModeratorBadge />}
+        
+        {/* Appointment indicator for center plate */}
+        {isOnAppointment && getAppointmentTime && isOnAppointment(queue[topPlayerIndex]) && (
+          <div className={appointmentBanner} style={{ fontSize: '0.7rem', padding: '0.2rem 0.6rem', transform: 'translateX(-50%)' }}>
+            ON APPOINTMENT
+            <span className="appointment-time">
+              {getAppointmentTime(queue[topPlayerIndex])}
+            </span>
+          </div>
+        )}
+      </div>
+      
+      {/* Carousel wheel with other players */}
+      <div className={carouselWheel}>
         {queue.map((player, index) => {
-          if (index === centerIndex) return null; // Center player rendered separately
-          
-          const plateStyle = getPlatePosition(index, queue.length);
+          if (index === topPlayerIndex) return null; // Skip the top player
           
           return (
             <div
@@ -270,14 +272,22 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
               } ${
                 isOnAppointment && isOnAppointment(player) ? 'on-appointment' : ''
               }`}
-              style={plateStyle}
+              style={getPlateStyle(index)}
             >
               <div className={playerName}>{player.length > 8 ? player.substring(0, 8) + '...' : player}</div>
               {player === currentPlayer && <div className={youBadge}>YOU</div>}
-              {isAdmin && typeof isAdmin === 'function' && isAdmin(player) && <AdminBadge />}
-              {isModerator && typeof isModerator === 'function' && isModerator(player) && <ModeratorBadge />}
+              {isAdmin && typeof isAdmin === 'function' && isAdmin(player) && (
+                <div style={{ transform: `rotate(${-rotationAngle}deg)` }}>
+                  <AdminBadge />
+                </div>
+              )}
+              {isModerator && typeof isModerator === 'function' && isModerator(player) && (
+                <div style={{ transform: `rotate(${-rotationAngle}deg)` }}>
+                  <ModeratorBadge />
+                </div>
+              )}
               
-              {/* Appointment indicator for smaller plates */}
+              {/* Appointment indicator */}
               {isOnAppointment && getAppointmentTime && isOnAppointment(player) && (
                 <div className={appointmentBanner}>
                   ON APT
@@ -286,33 +296,6 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
             </div>
           );
         })}
-      </div>
-      
-      {/* Center plate */}
-      <div 
-        className={`${centerPlate} ${
-          centerPlayer === currentPlayer ? 'current' : ''
-        } ${
-          isOnAppointment && isOnAppointment(centerPlayer) ? 'on-appointment' : ''
-        }`}
-      >
-        <div style={{ position: 'absolute', top: '-20px', backgroundColor: '#a47148', color: 'white', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem' }}>
-          NEXT
-        </div>
-        <div className={playerName} style={{ fontSize: '1.25rem' }}>{centerPlayer}</div>
-        {centerPlayer === currentPlayer && <div className={youBadge} style={{ fontSize: '0.875rem' }}>YOU</div>}
-        {isAdmin && typeof isAdmin === 'function' && isAdmin(centerPlayer) && <AdminBadge />}
-        {isModerator && typeof isModerator === 'function' && isModerator(centerPlayer) && <ModeratorBadge />}
-        
-        {/* Appointment indicator for center plate */}
-        {isOnAppointment && getAppointmentTime && isOnAppointment(centerPlayer) && (
-          <div className={appointmentBanner} style={{ fontSize: '0.7rem', padding: '0.2rem 0.6rem' }}>
-            ON APPOINTMENT
-            <span className="appointment-time">
-              {getAppointmentTime(centerPlayer)}
-            </span>
-          </div>
-        )}
       </div>
       
       {/* Rotation arrows */}
