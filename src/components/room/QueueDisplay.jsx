@@ -33,13 +33,11 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
   // Container styles
   const container = css`
     position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 320px;
+    width: 100%;
+    min-height: 350px;
     padding: 1rem;
-    margin: 2rem 0;
+    margin: 1rem 0;
+    overflow: hidden;
   `;
   
   // Center plate styles (larger)
@@ -54,22 +52,31 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     align-items: center;
     justify-content: center;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    position: relative;
-    margin: 2rem auto;
+    position: absolute;
+    top: 150px;
+    left: 50%;
+    transform: translateX(-50%);
     z-index: 10;
     padding: 1rem;
     text-align: center;
+    transition: all 0.3s ease;
+    
+    &.current {
+      border: 3px solid #a47148;
+    }
+    
+    &.on-appointment {
+      border: 3px solid #9c27b0;
+    }
   `;
   
-  // Semi-circle of plates
-  const plateCircle = css`
-    position: absolute;
-    width: 100%;
-    height: 180px;
-    top: 0;
-    left: 0;
-    right: 0;
+  // Carousel container
+  const carousel = css`
+    position: relative;
+    height: 100px;
+    margin-top: 20px;
     display: flex;
+    align-items: center;
     justify-content: center;
   `;
   
@@ -112,10 +119,11 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     align-items: center;
     justify-content: center;
     position: absolute;
-    bottom: 0;
+    bottom: 10px;
     cursor: pointer;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     transition: background-color 0.2s;
+    z-index: 20;
     
     &:hover {
       background-color: #8a5d3b;
@@ -128,11 +136,11 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     }
     
     &.left {
-      left: 15%;
+      left: 20%;
     }
     
     &.right {
-      right: 15%;
+      right: 20%;
     }
   `;
   
@@ -205,48 +213,54 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
   // Get the player for center position
   const centerPlayer = queue[centerIndex];
   
-  // Calculate positions for plates in semi-circle
+  // Calculate positions for plates in horizontal carousel
   const getPlatePosition = (index, totalPlates) => {
     // If only showing one player, don't calculate positions
-    if (queue.length <= 1) return {};
+    if (queue.length <= 1) return { display: 'none' };
     
-    const radius = 140; // Radius of the semi-circle
+    // Determine visibility and position
+    const visiblePlatesCount = Math.min(5, queue.length - 1); // Max 5 visible plates excluding center
     
-    // We'll display max 5 additional plates (or less if not enough players)
-    const maxVisiblePlates = Math.min(5, queue.length - 1);
-    
-    // Get the players before and after the center player, wrapping around the queue
-    const plateIndices = [];
-    for (let i = -Math.floor(maxVisiblePlates / 2); i <= Math.ceil(maxVisiblePlates / 2); i++) {
-      if (i === 0) continue; // Skip the center player
-      
-      let plateIndex = (centerIndex + i + queue.length) % queue.length;
-      plateIndices.push(plateIndex);
+    let relativePosition = index - centerIndex;
+    if (relativePosition < 0) relativePosition += queue.length;
+    if (relativePosition > 0 && relativePosition > Math.floor(queue.length / 2)) {
+      relativePosition = relativePosition - queue.length;
     }
     
-    // If this plate isn't in our visible indices, don't show it
-    if (!plateIndices.includes(index)) return { display: 'none' };
+    // Hide plates that are too far from the center
+    const maxDistance = Math.floor(visiblePlatesCount / 2);
+    if (Math.abs(relativePosition) > maxDistance) return { display: 'none' };
     
-    // Calculate position in the semi-circle
-    const visibleIndex = plateIndices.indexOf(index);
-    const angleRange = 180; // Semi-circle = 180 degrees
-    const angleStep = angleRange / (maxVisiblePlates + 1);
-    const angle = (visibleIndex + 1) * angleStep;
-    const angleRadians = (angle * Math.PI) / 180;
+    // Calculate horizontal position
+    const baseWidth = 120; // Space between plates
+    const xPosition = relativePosition * baseWidth;
     
-    // Position on the semi-circle (top half)
-    const left = `calc(50% + ${radius * Math.sin(angleRadians)}px)`;
-    const top = `calc(${radius * (1 - Math.cos(angleRadians))}px)`;
+    // Add curved effect - plates further from the center appear slightly higher
+    const yAdjustment = Math.abs(relativePosition) * 10;
     
-    return { left, top };
+    // Make plates smaller the further they are from center
+    const scale = 1 - Math.abs(relativePosition) * 0.15;
+    
+    // Calculate z-index - closer to center = higher z-index
+    const zIndex = 5 - Math.abs(relativePosition);
+    
+    return {
+      left: `calc(50% + ${xPosition}px)`,
+      top: `${50 - yAdjustment}px`,
+      transform: `translateX(-50%) scale(${scale})`,
+      opacity: 1 - Math.abs(relativePosition) * 0.2, // Fade out plates further from center
+      zIndex
+    };
   };
   
   return (
     <div className={container}>
-      {/* Semi-circle of plates */}
-      <div className={plateCircle}>
+      {/* Carousel of plates */}
+      <div className={carousel}>
         {queue.map((player, index) => {
           if (index === centerIndex) return null; // Center player rendered separately
+          
+          const plateStyle = getPlatePosition(index, queue.length);
           
           return (
             <div
@@ -256,7 +270,7 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
               } ${
                 isOnAppointment && isOnAppointment(player) ? 'on-appointment' : ''
               }`}
-              style={getPlatePosition(index, queue.length)}
+              style={plateStyle}
             >
               <div className={playerName}>{player.length > 8 ? player.substring(0, 8) + '...' : player}</div>
               {player === currentPlayer && <div className={youBadge}>YOU</div>}
