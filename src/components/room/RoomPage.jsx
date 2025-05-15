@@ -747,13 +747,13 @@ export default function RoomPage({ roomId, roomName }) {
       <div className={card}>
         <div className={cardTitle}>Current Queue</div>
         <QueueDisplay 
-          queue={queue}
-          currentPlayer={playerName}
-          isModerator={isModerator}
-          isAdmin={isAdmin}
-          isOnAppointment={isOnAppointment}
-          getAppointmentTime={getAppointmentTime}
-        />
+  queue={queue}
+  currentPlayer={playerName}
+  isModerator={isModerator}
+  isAdmin={isAdmin}
+  isOnAppointment={isOnAppointment}
+  getAppointmentTime={getAppointmentTime}
+/>
       </div>
 
       {/* Moderator Queue Control */}
