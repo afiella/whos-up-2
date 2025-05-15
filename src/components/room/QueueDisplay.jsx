@@ -8,15 +8,23 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
   const container = css`
     display: flex;
     align-items: center;
-    gap: 2rem;
-    padding: 2rem;
+    gap: 1rem; /* Smaller gap on mobile */
+    padding: 1rem;
     overflow-x: auto;
     position: relative;
+    min-height: 120px; /* Ensure minimum height for container */
+    
+    @media (min-width: 768px) {
+      gap: 2rem; /* Original gap on desktop */
+      padding: 2rem;
+    }
   `;
   
   const playerCircle = css`
-    width: 120px;
-    height: 120px;
+    width: min(80px, 22vw); /* Responsive size that won't get too small */
+    height: min(80px, 22vw); /* Same as width to maintain circle shape */
+    min-width: 70px; /* Minimum size to prevent too small circles */
+    min-height: 70px;
     border-radius: 50%;
     display: flex;
     flex-direction: column;
@@ -24,13 +32,16 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     justify-content: center;
     font-family: Poppins, sans-serif;
     position: relative;
+    flex-shrink: 0; /* Prevent circle from shrinking */
     
     &.first {
-      width: 150px;
-      height: 150px;
+      width: min(100px, 28vw);
+      height: min(100px, 28vw);
+      min-width: 85px;
+      min-height: 85px;
       background-color: #d67b7b;
       color: white;
-      font-size: 1.25rem;
+      font-size: 1rem;
     }
     
     &.waiting {
@@ -39,11 +50,30 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     }
     
     &.current {
-      border: 4px solid #a47148;
+      border: 3px solid #a47148;
     }
     
     &.on-appointment {
-      border: 4px solid #9c27b0;
+      border: 3px solid #9c27b0;
+    }
+    
+    @media (min-width: 768px) {
+      width: 120px; /* Original size on desktop */
+      height: 120px;
+      
+      &.first {
+        width: 150px;
+        height: 150px;
+        font-size: 1.25rem;
+      }
+      
+      &.current {
+        border: 4px solid #a47148;
+      }
+      
+      &.on-appointment {
+        border: 4px solid #9c27b0;
+      }
     }
   `;
   
@@ -54,47 +84,77 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     color: white;
     border-radius: 1rem;
     padding: 0.25rem 0.75rem;
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     font-weight: 600;
+    
+    @media (min-width: 768px) {
+      font-size: 0.875rem;
+    }
   `;
   
   const playerName = css`
     font-weight: 600;
     text-align: center;
     margin-bottom: 0.25rem;
+    font-size: 0.85rem;
+    word-break: break-word;
+    max-width: 100%;
+    padding: 0 5px;
+    
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
   `;
   
   const youBadge = css`
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: #a47148;
     font-weight: 600;
+    
+    @media (min-width: 768px) {
+      font-size: 0.75rem;
+    }
   `;
   
   const arrow = css`
-    font-size: 2rem;
+    font-size: 1.5rem;
     color: #d67b7b;
+    
+    @media (min-width: 768px) {
+      font-size: 2rem;
+    }
   `;
   
-  // New style for the appointment banner
+  // Appointment banner style
   const appointmentBanner = css`
     position: absolute;
-    bottom: -10px;
+    bottom: -8px;
     left: 50%;
     transform: translateX(-50%);
-    background-color: #9c27b0; /* Bright purple color */
+    background-color: #9c27b0;
     color: white;
     font-family: Poppins, sans-serif;
-    font-size: 0.6rem;
-    padding: 0.125rem 0.5rem;
+    font-size: 0.5rem;
+    padding: 0.125rem 0.4rem;
     border-radius: 0.25rem;
     white-space: nowrap;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
     
     .appointment-time {
       display: block;
-      font-size: 0.5rem;
+      font-size: 0.4rem;
       opacity: 0.9;
       text-align: center;
+    }
+    
+    @media (min-width: 768px) {
+      bottom: -10px;
+      font-size: 0.6rem;
+      padding: 0.125rem 0.5rem;
+      
+      .appointment-time {
+        font-size: 0.5rem;
+      }
     }
   `;
   
