@@ -30,7 +30,7 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
   const container = css`
     position: relative;
     width: 100%;
-    height: 550px;
+    height: 520px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -53,14 +53,14 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
   // Carousel container (rotary wheel)
   const carouselWheel = css`
     position: relative;
-    width: 350px;
+    width: 100%;
     height: 350px;
     margin: 0 auto;
     transition: transform 0.5s ease;
     transform: rotate(${rotationAngle}deg);
   `;
   
-  // Player circles
+  // Player circles - size is dynamically calculated based on queue length
   const playerCircle = css`
     width: 120px;
     height: 120px;
@@ -91,7 +91,7 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     font-weight: 600;
     text-align: center;
     transform: rotate(${-rotationAngle}deg);
-    max-width: 80%;
+    max-width: 90%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -103,14 +103,9 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     border: none;
     cursor: pointer;
     position: absolute;
-    bottom: 120px;
+    bottom: 40px;
     padding: 0;
     z-index: 30;
-    
-    img {
-      width: 80px;
-      height: auto;
-    }
     
     &:disabled {
       opacity: 0.5;
@@ -118,11 +113,11 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     }
     
     &.left {
-      left: 50px;
+      left: 20px;
     }
     
     &.right {
-      right: 50px;
+      right: 20px;
     }
   `;
   
@@ -173,46 +168,34 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
   // Ensure the index is within bounds and handle negative rotation
   const normalizedTopIndex = ((topPlayerIndex % queue.length) + queue.length) % queue.length;
   
-  // Calculate plate positions in a cross formation (top, right, bottom, left)
+  // Calculate positions for circles
   const getCirclePosition = (index, totalPlayers) => {
-    // For 4 or fewer players, position them in a cross pattern
+    // Always position in a circle
+    const angleInDegrees = (index * 360) / totalPlayers;
+    const angleInRadians = (angleInDegrees * Math.PI) / 180;
+    
+    // Adjust radius based on number of players to ensure they fit
+    let radius;
     if (totalPlayers <= 4) {
-      switch(index) {
-        case 0: // Top
-          return { left: '50%', top: '0%', transform: 'translateX(-50%)' };
-        case 1: // Right
-          return { right: '0%', top: '50%', transform: 'translateY(-50%)' };
-        case 2: // Bottom
-          return { left: '50%', bottom: '0%', transform: 'translateX(-50%)' };
-        case 3: // Left
-          return { left: '0%', top: '50%', transform: 'translateY(-50%)' };
-        default:
-          return { display: 'none' }; // Shouldn't happen
-      }
+      radius = 120; // For 4 or fewer, use the standard cross layout radius
+    } else if (totalPlayers <= 8) {
+      radius = 140; // For 5-8 players, slightly larger radius
     } else {
-      // For more than 4 players, position them in a circle
-      const angleInDegrees = (index * 360) / totalPlayers;
-      const angleInRadians = (angleInDegrees * Math.PI) / 180;
-      
-      // Radius of the circle
-      const radius = 120;
-      
-      // Calculate position using sine and cosine
-      const x = radius * Math.sin(angleInRadians);
-      const y = -radius * Math.cos(angleInRadians);
-      
-      return {
-        left: `calc(50% + ${x}px)`,
-        top: `calc(50% + ${y}px)`,
-        transform: 'translate(-50%, -50%)',
-      };
+      radius = 155; // For more than 8 players, use largest radius
     }
+    
+    // Calculate position using sine and cosine
+    const x = radius * Math.sin(angleInRadians);
+    const y = -radius * Math.cos(angleInRadians);
+    
+    return {
+      left: `calc(50% + ${x}px)`,
+      top: `calc(50% + ${y}px)`,
+      transform: 'translate(-50%, -50%)',
+    };
   };
   
-  // We'll show only up to 4 players at a time in the cross formation
-  const visiblePlayers = queue.length > 4 ? 4 : queue.length;
-
-  // Check if current user is admin or moderator
+  // Determine if the current user is an admin or moderator
   const isCurrentUserAdminOrMod = 
     (typeof isAdmin === 'function' && isAdmin(currentPlayer)) || 
     (typeof isModerator === 'function' && isModerator(currentPlayer));
@@ -228,9 +211,7 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
           // Calculate the visual position index (0 is always at the top)
           const visualIndex = (index - normalizedTopIndex + queue.length) % queue.length;
           
-          // Only show players in positions 0-3 (top, right, bottom, left)
-          if (visualIndex >= visiblePlayers) return null;
-          
+          // No limit on number of visible players - show them all
           return (
             <div
               key={player}
@@ -239,7 +220,7 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
               } ${
                 isOnAppointment && isOnAppointment(player) ? 'on-appointment' : ''
               }`}
-              style={getCirclePosition(visualIndex, visiblePlayers)}
+              style={getCirclePosition(visualIndex, queue.length)}
             >
               {/* "YOU" badge for the current player */}
               {player === currentPlayer && (
