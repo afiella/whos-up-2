@@ -39,7 +39,7 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
   const container = css`
     position: relative;
     width: 100%;
-    height: 380px;
+    height: 400px;
     padding: 1rem;
     margin: 1rem 0;
     display: flex;
@@ -81,8 +81,8 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
   // Carousel container (rotary wheel)
   const carouselWheel = css`
     position: relative;
-    width: 280px;
-    height: 280px;
+    width: 300px;
+    height: 300px;
     margin-top: 100px;
     transition: transform 0.5s ease;
     transform: rotate(${rotationAngle}deg);
@@ -101,9 +101,12 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     justify-content: center;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     position: absolute;
+    left: 50%;
+    top: 50%;
+    margin-left: -40px;
+    margin-top: -40px;
     padding: 0.5rem;
     text-align: center;
-    transform-origin: center 140px; /* This ensures rotation around the wheel */
     
     &.current {
       border: 3px solid #a47148;
@@ -111,6 +114,43 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     
     &.on-appointment {
       border: 3px solid #9c27b0;
+    }
+  `;
+  
+  // Player name label
+  const plateLabel = css`
+    position: absolute;
+    width: 90px;
+    text-align: center;
+    font-family: Poppins, sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #4b3b2b;
+    transform: translateX(-50%);
+    top: 85px;
+    
+    @media (min-width: 768px) {
+      font-size: 0.9rem;
+    }
+  `;
+  
+  // You badge styles
+  const youBadge = css`
+    position: absolute;
+    top: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #a47148;
+    color: white;
+    font-family: Poppins, sans-serif;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 12px;
+    white-space: nowrap;
+    
+    @media (min-width: 768px) {
+      font-size: 0.75rem;
     }
   `;
   
@@ -152,38 +192,12 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     }
   `;
   
-  // Player name styles
-  const playerName = css`
-    font-weight: 600;
-    font-size: 0.75rem;
-    word-break: break-word;
-    max-width: 100%;
-    font-family: Poppins, sans-serif;
-    transform: rotate(${-rotationAngle}deg); /* Counter-rotate to keep text upright */
-    
-    @media (min-width: 768px) {
-      font-size: 0.9rem;
-    }
-  `;
-  
-  // You badge styles
-  const youBadge = css`
-    font-size: 0.7rem;
-    color: #a47148;
-    font-weight: 600;
-    transform: rotate(${-rotationAngle}deg); /* Counter-rotate to keep badge upright */
-    
-    @media (min-width: 768px) {
-      font-size: 0.75rem;
-    }
-  `;
-  
   // Appointment banner style
   const appointmentBanner = css`
     position: absolute;
-    bottom: -8px;
+    bottom: -18px;
     left: 50%;
-    transform: translateX(-50%) rotate(${-rotationAngle}deg); /* Counter-rotate */
+    transform: translateX(-50%);
     background-color: #9c27b0;
     color: white;
     font-family: Poppins, sans-serif;
@@ -201,7 +215,6 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     }
     
     @media (min-width: 768px) {
-      bottom: -10px;
       font-size: 0.6rem;
       padding: 0.125rem 0.5rem;
       
@@ -222,10 +235,42 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
   
   // Calculate plate positions in a circle
   const getPlateStyle = (index) => {
-    const angleInRadians = (index * 2 * Math.PI) / queue.length;
-    const transform = `rotate(${(index * 360) / queue.length}deg) translateY(-140px)`;
+    // Calculate the position on the circle
+    const angleInDegrees = (index * 360) / queue.length;
+    const angleInRadians = (angleInDegrees * Math.PI) / 180;
     
-    return { transform };
+    // Radius of the circle (half the container width minus half the plate width)
+    const radius = 120;
+    
+    // Calculate position using sine and cosine
+    const x = radius * Math.sin(angleInRadians);
+    const y = -radius * Math.cos(angleInRadians);
+    
+    // Return transformations to position on the circle
+    return {
+      transform: `translate(${x}px, ${y}px)`,
+    };
+  };
+  
+  // Get label position that's always upright regardless of carousel rotation
+  const getLabelStyle = (index) => {
+    // Calculate the position on the circle
+    const angleInDegrees = (index * 360) / queue.length;
+    const angleInRadians = (angleInDegrees * Math.PI) / 180;
+    
+    // Radius of the circle (half the container width minus half the plate width)
+    const radius = 120;
+    
+    // Calculate position using sine and cosine
+    const x = radius * Math.sin(angleInRadians + (rotationAngle * Math.PI / 180));
+    const y = -radius * Math.cos(angleInRadians + (rotationAngle * Math.PI / 180));
+    
+    // Return transformations to position on the circle
+    return {
+      transform: `translate(${x}px, ${y}px) translateX(-50%)`,
+      top: y + 150,
+      left: x + 150,
+    };
   };
   
   return (
@@ -241,16 +286,20 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
         <div style={{ position: 'absolute', top: '-20px', backgroundColor: '#a47148', color: 'white', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem' }}>
           NEXT
         </div>
-        <div className={playerName} style={{ fontSize: '1.25rem', transform: 'none' }}>
+        <div style={{ fontSize: '1.25rem', fontWeight: 600 }}>
           {queue[topPlayerIndex]}
         </div>
-        {queue[topPlayerIndex] === currentPlayer && <div className={youBadge} style={{ fontSize: '0.875rem', transform: 'none' }}>YOU</div>}
+        {queue[topPlayerIndex] === currentPlayer && (
+          <div style={{ position: 'absolute', top: '-25px', backgroundColor: '#a47148', color: 'white', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem' }}>
+            YOU
+          </div>
+        )}
         {isAdmin && typeof isAdmin === 'function' && isAdmin(queue[topPlayerIndex]) && <AdminBadge />}
         {isModerator && typeof isModerator === 'function' && isModerator(queue[topPlayerIndex]) && <ModeratorBadge />}
         
         {/* Appointment indicator for center plate */}
         {isOnAppointment && getAppointmentTime && isOnAppointment(queue[topPlayerIndex]) && (
-          <div className={appointmentBanner} style={{ fontSize: '0.7rem', padding: '0.2rem 0.6rem', transform: 'translateX(-50%)' }}>
+          <div className={appointmentBanner} style={{ fontSize: '0.7rem', padding: '0.2rem 0.6rem' }}>
             ON APPOINTMENT
             <span className="appointment-time">
               {getAppointmentTime(queue[topPlayerIndex])}
@@ -265,35 +314,56 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
           if (index === topPlayerIndex) return null; // Skip the top player
           
           return (
-            <div
-              key={player}
-              className={`${plate} ${
-                player === currentPlayer ? 'current' : ''
-              } ${
-                isOnAppointment && isOnAppointment(player) ? 'on-appointment' : ''
-              }`}
-              style={getPlateStyle(index)}
-            >
-              <div className={playerName}>{player.length > 8 ? player.substring(0, 8) + '...' : player}</div>
-              {player === currentPlayer && <div className={youBadge}>YOU</div>}
-              {isAdmin && typeof isAdmin === 'function' && isAdmin(player) && (
-                <div style={{ transform: `rotate(${-rotationAngle}deg)` }}>
-                  <AdminBadge />
-                </div>
-              )}
-              {isModerator && typeof isModerator === 'function' && isModerator(player) && (
-                <div style={{ transform: `rotate(${-rotationAngle}deg)` }}>
-                  <ModeratorBadge />
-                </div>
-              )}
+            <React.Fragment key={player}>
+              <div
+                className={`${plate} ${
+                  player === currentPlayer ? 'current' : ''
+                } ${
+                  isOnAppointment && isOnAppointment(player) ? 'on-appointment' : ''
+                }`}
+                style={getPlateStyle(index)}
+              >
+                {/* Empty plate - content is rendered separately to stay upright */}
+                {isAdmin && typeof isAdmin === 'function' && isAdmin(player) && (
+                  <div style={{ position: 'absolute', zIndex: 5 }}>
+                    <AdminBadge />
+                  </div>
+                )}
+                {isModerator && typeof isModerator === 'function' && isModerator(player) && (
+                  <div style={{ position: 'absolute', zIndex: 5 }}>
+                    <ModeratorBadge />
+                  </div>
+                )}
+                
+                {/* Appointment indicator */}
+                {isOnAppointment && getAppointmentTime && isOnAppointment(player) && (
+                  <div className={appointmentBanner}>
+                    ON APT
+                  </div>
+                )}
+              </div>
               
-              {/* Appointment indicator */}
-              {isOnAppointment && getAppointmentTime && isOnAppointment(player) && (
-                <div className={appointmentBanner}>
-                  ON APT
+              {/* Name label - positioned to always stay upright */}
+              <div 
+                className={plateLabel}
+                style={getLabelStyle(index)}
+              >
+                {player.length > 12 ? player.substring(0, 10) + '...' : player}
+              </div>
+              
+              {/* YOU badge - above the circle */}
+              {player === currentPlayer && (
+                <div 
+                  className={youBadge}
+                  style={{
+                    ...getLabelStyle(index),
+                    top: getLabelStyle(index).top - 45, // Position above the circle
+                  }}
+                >
+                  YOU
                 </div>
               )}
-            </div>
+            </React.Fragment>
           );
         })}
       </div>
