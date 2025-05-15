@@ -1,5 +1,5 @@
 // src/components/room/QueueDisplay.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { css } from '@emotion/css';
 import ModeratorBadge from '../ui/ModeratorBadge';
 import AdminBadge from '../ui/AdminBadge';
@@ -7,10 +7,33 @@ import AdminBadge from '../ui/AdminBadge';
 export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmin, isOnAppointment, getAppointmentTime }) {
   // State to track rotation angle
   const [rotationAngle, setRotationAngle] = useState(0);
+  // Reference to track previous queue length for animations
+  const prevQueueLengthRef = useRef(queue.length);
+  // Animation state
+  const [isAnimating, setIsAnimating] = useState(false);
   
-  // Reset rotation when queue changes
+  // Handle queue changes - reset rotation and animate when new players join
   useEffect(() => {
-    setRotationAngle(0);
+    // Check if a new player has joined
+    if (queue.length > prevQueueLengthRef.current) {
+      // New player joined - animate the transition
+      setIsAnimating(true);
+      
+      // After animation completes, reset the animation flag
+      const timer = setTimeout(() => {
+        setIsAnimating(false);
+      }, 500); // Match this with the transition duration
+      
+      return () => clearTimeout(timer);
+    }
+    
+    // Update the previous queue length reference
+    prevQueueLengthRef.current = queue.length;
+    
+    // Reset rotation if queue is cleared
+    if (queue.length === 0) {
+      setRotationAngle(0);
+    }
   }, [queue.length]);
   
   // Handle rotation
@@ -60,7 +83,7 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     transform: rotate(${rotationAngle}deg);
   `;
   
-  // Player circles - size is dynamically calculated based on queue length
+  // Player circles
   const playerCircle = css`
     width: 120px;
     height: 120px;
@@ -72,7 +95,7 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     justify-content: center;
     position: absolute;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
+    transition: all ${isAnimating ? '0.5s' : '0.3s'} ease;
     
     &.current {
       border: 3px solid #a47148;
@@ -170,7 +193,7 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
   
   // Calculate positions for circles
   const getCirclePosition = (index, totalPlayers) => {
-    // Always position in a circle
+    // Always position in a circle with equal spacing
     const angleInDegrees = (index * 360) / totalPlayers;
     const angleInRadians = (angleInDegrees * Math.PI) / 180;
     
@@ -180,8 +203,10 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
       radius = 120; // For 4 or fewer, use the standard cross layout radius
     } else if (totalPlayers <= 8) {
       radius = 140; // For 5-8 players, slightly larger radius
+    } else if (totalPlayers <= 12) {
+      radius = 155; // For 9-12 players, even larger radius
     } else {
-      radius = 155; // For more than 8 players, use largest radius
+      radius = 165; // For 13+ players, use maximum radius
     }
     
     // Calculate position using sine and cosine
@@ -211,7 +236,6 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
           // Calculate the visual position index (0 is always at the top)
           const visualIndex = (index - normalizedTopIndex + queue.length) % queue.length;
           
-          // No limit on number of visible players - show them all
           return (
             <div
               key={player}
