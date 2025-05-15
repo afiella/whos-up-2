@@ -39,7 +39,7 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
   const container = css`
     position: relative;
     width: 100%;
-    height: 400px;
+    height: 500px;
     padding: 1rem;
     margin: 1rem 0;
     display: flex;
@@ -62,16 +62,13 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     justify-content: center;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     position: absolute;
-    top: 20px;
+    top: 100px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 20;
     padding: 1rem;
     text-align: center;
-    
-    &.current {
-      border: 3px solid #a47148;
-    }
+    border: 3px solid #a47148;
     
     &.on-appointment {
       border: 3px solid #9c27b0;
@@ -80,10 +77,12 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
   
   // Carousel container (rotary wheel)
   const carouselWheel = css`
-    position: relative;
+    position: absolute;
     width: 300px;
     height: 300px;
-    margin-top: 100px;
+    top: 180px;
+    left: 50%;
+    margin-left: -150px;
     transition: transform 0.5s ease;
     transform: rotate(${rotationAngle}deg);
   `;
@@ -107,6 +106,9 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     margin-top: -40px;
     padding: 0.5rem;
     text-align: center;
+    font-family: Poppins, sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
     
     &.current {
       border: 3px solid #a47148;
@@ -117,27 +119,10 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     }
   `;
   
-  // Player name label
-  const plateLabel = css`
-    position: absolute;
-    width: 90px;
-    text-align: center;
-    font-family: Poppins, sans-serif;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #4b3b2b;
-    transform: translateX(-50%);
-    top: 85px;
-    
-    @media (min-width: 768px) {
-      font-size: 0.9rem;
-    }
-  `;
-  
-  // You badge styles
+  // You badge styles - moved to a pill above the circle
   const youBadge = css`
     position: absolute;
-    top: -18px;
+    top: -23px;
     left: 50%;
     transform: translateX(-50%);
     background-color: #a47148;
@@ -145,7 +130,28 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     font-family: Poppins, sans-serif;
     font-size: 0.7rem;
     font-weight: 600;
-    padding: 2px 8px;
+    padding: 2px 10px;
+    border-radius: 12px;
+    white-space: nowrap;
+    z-index: 2;
+    
+    @media (min-width: 768px) {
+      font-size: 0.75rem;
+    }
+  `;
+  
+  // Next badge for the top player
+  const nextBadge = css`
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #a47148;
+    color: white;
+    font-family: Poppins, sans-serif;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 2px 10px;
     border-radius: 12px;
     white-space: nowrap;
     
@@ -156,8 +162,8 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
   
   // Arrow button styles
   const arrowButton = css`
-    width: 50px;
-    height: 50px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     background-color: #a47148;
     color: white;
@@ -167,7 +173,7 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     align-items: center;
     justify-content: center;
     position: absolute;
-    bottom: 10px;
+    bottom: 50px;
     cursor: pointer;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     transition: background-color 0.2s;
@@ -252,48 +258,32 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     };
   };
   
-  // Get label position that's always upright regardless of carousel rotation
-  const getLabelStyle = (index) => {
-    // Calculate the position on the circle
-    const angleInDegrees = (index * 360) / queue.length;
-    const angleInRadians = (angleInDegrees * Math.PI) / 180;
-    
-    // Radius of the circle (half the container width minus half the plate width)
-    const radius = 120;
-    
-    // Calculate position using sine and cosine
-    const x = radius * Math.sin(angleInRadians + (rotationAngle * Math.PI / 180));
-    const y = -radius * Math.cos(angleInRadians + (rotationAngle * Math.PI / 180));
-    
-    // Return transformations to position on the circle
-    return {
-      transform: `translate(${x}px, ${y}px) translateX(-50%)`,
-      top: y + 150,
-      left: x + 150,
-    };
-  };
-  
   return (
     <div className={container}>
       {/* Top/center plate (first player) */}
       <div 
         className={`${centerPlate} ${
-          queue[topPlayerIndex] === currentPlayer ? 'current' : ''
-        } ${
           isOnAppointment && isOnAppointment(queue[topPlayerIndex]) ? 'on-appointment' : ''
         }`}
       >
-        <div style={{ position: 'absolute', top: '-20px', backgroundColor: '#a47148', color: 'white', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem' }}>
+        {/* NEXT badge at the top, slightly offset if "YOU" badge is also present */}
+        <div className={nextBadge} style={{
+          top: queue[topPlayerIndex] === currentPlayer ? '-40px' : '-20px'
+        }}>
           NEXT
         </div>
-        <div style={{ fontSize: '1.25rem', fontWeight: 600 }}>
-          {queue[topPlayerIndex]}
-        </div>
+        
+        {/* Show YOU badge if this is the current player, position it above NEXT */}
         {queue[topPlayerIndex] === currentPlayer && (
-          <div style={{ position: 'absolute', top: '-25px', backgroundColor: '#a47148', color: 'white', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem' }}>
+          <div className={youBadge} style={{ top: '-20px' }}>
             YOU
           </div>
         )}
+        
+        <div style={{ fontSize: '1.25rem', fontWeight: 600 }}>
+          {queue[topPlayerIndex]}
+        </div>
+        
         {isAdmin && typeof isAdmin === 'function' && isAdmin(queue[topPlayerIndex]) && <AdminBadge />}
         {isModerator && typeof isModerator === 'function' && isModerator(queue[topPlayerIndex]) && <ModeratorBadge />}
         
@@ -314,56 +304,46 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
           if (index === topPlayerIndex) return null; // Skip the top player
           
           return (
-            <React.Fragment key={player}>
-              <div
-                className={`${plate} ${
-                  player === currentPlayer ? 'current' : ''
-                } ${
-                  isOnAppointment && isOnAppointment(player) ? 'on-appointment' : ''
-                }`}
-                style={getPlateStyle(index)}
-              >
-                {/* Empty plate - content is rendered separately to stay upright */}
-                {isAdmin && typeof isAdmin === 'function' && isAdmin(player) && (
-                  <div style={{ position: 'absolute', zIndex: 5 }}>
-                    <AdminBadge />
-                  </div>
-                )}
-                {isModerator && typeof isModerator === 'function' && isModerator(player) && (
-                  <div style={{ position: 'absolute', zIndex: 5 }}>
-                    <ModeratorBadge />
-                  </div>
-                )}
-                
-                {/* Appointment indicator */}
-                {isOnAppointment && getAppointmentTime && isOnAppointment(player) && (
-                  <div className={appointmentBanner}>
-                    ON APT
-                  </div>
-                )}
-              </div>
-              
-              {/* Name label - positioned to always stay upright */}
-              <div 
-                className={plateLabel}
-                style={getLabelStyle(index)}
-              >
-                {player.length > 12 ? player.substring(0, 10) + '...' : player}
-              </div>
-              
-              {/* YOU badge - above the circle */}
+            <div
+              key={player}
+              className={`${plate} ${
+                player === currentPlayer ? 'current' : ''
+              } ${
+                isOnAppointment && isOnAppointment(player) ? 'on-appointment' : ''
+              }`}
+              style={getPlateStyle(index)}
+            >
+              {/* Position "YOU" badge above the circle if this is the current player */}
               {player === currentPlayer && (
-                <div 
-                  className={youBadge}
-                  style={{
-                    ...getLabelStyle(index),
-                    top: getLabelStyle(index).top - 45, // Position above the circle
-                  }}
-                >
+                <div className={youBadge}>
                   YOU
                 </div>
               )}
-            </React.Fragment>
+              
+              {/* Player name inside the circle */}
+              <div style={{ 
+                transform: `rotate(${-rotationAngle}deg)`,
+                maxWidth: '90%',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}>
+                {player.length > 10 ? player.substring(0, 8) + '...' : player}
+              </div>
+              
+              {/* Badge indicators inside the plate and rotated to stay upright */}
+              <div style={{ transform: `rotate(${-rotationAngle}deg)`, position: 'absolute', bottom: '5px' }}>
+                {isAdmin && typeof isAdmin === 'function' && isAdmin(player) && <AdminBadge />}
+                {isModerator && typeof isModerator === 'function' && isModerator(player) && <ModeratorBadge />}
+              </div>
+              
+              {/* Appointment indicator */}
+              {isOnAppointment && getAppointmentTime && isOnAppointment(player) && (
+                <div className={appointmentBanner} style={{ transform: `translateX(-50%) rotate(${-rotationAngle}deg)` }}>
+                  ON APT
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
