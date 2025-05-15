@@ -49,18 +49,16 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     }
   };
   
-  // Container styles
+  // Main container styles - simplified and made responsive
   const container = css`
     position: relative;
     width: 100%;
-    height: 520px;
+    background-color: transparent;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-start;
-    padding: 0;
+    padding: 0 0 100px 0;
     margin: 0;
-    overflow: hidden;
   `;
   
   // "UP NOW" label at top
@@ -68,27 +66,46 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     font-family: 'Poppins', sans-serif;
     font-size: 2rem;
     font-weight: 700;
-    color: #59b368; /* Green color like in the image */
+    color: #59b368;
     text-align: center;
-    margin: 20px 0 10px;
+    margin: 20px 0;
   `;
   
-  // Carousel container (rotary wheel)
+  // Carousel container
   const carouselWheel = css`
     position: relative;
-    width: 100%;
-    height: 350px;
-    margin: 0 auto;
+    width: 300px;
+    height: 300px;
     transition: transform 0.5s ease;
     transform: rotate(${rotationAngle}deg);
+    
+    @media (min-width: 375px) {
+      width: 320px;
+      height: 320px;
+    }
+    
+    @media (min-width: 390px) {
+      width: 340px;
+      height: 340px;
+    }
+    
+    @media (min-width: 414px) {
+      width: 360px;
+      height: 360px;
+    }
+    
+    @media (min-width: 430px) {
+      width: 380px;
+      height: 380px;
+    }
   `;
   
   // Player circles
   const playerCircle = css`
-    width: 120px;
-    height: 120px;
+    width: 110px;
+    height: 110px;
     border-radius: 50%;
-    background-color: #9a7096; /* Purple color from image */
+    background-color: #9a7096;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -104,6 +121,16 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     &.on-appointment {
       border: 3px solid #9c27b0;
     }
+    
+    @media (min-width: 390px) {
+      width: 115px;
+      height: 115px;
+    }
+    
+    @media (min-width: 430px) {
+      width: 120px;
+      height: 120px;
+    }
   `;
   
   // Player name styles
@@ -114,7 +141,7 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     font-weight: 600;
     text-align: center;
     transform: rotate(${-rotationAngle}deg);
-    max-width: 90%;
+    max-width: 85%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -126,9 +153,14 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     border: none;
     cursor: pointer;
     position: absolute;
-    bottom: 40px;
+    bottom: 20px;
     padding: 0;
     z-index: 30;
+    
+    svg {
+      width: 70px;
+      height: 70px;
+    }
     
     &:disabled {
       opacity: 0.5;
@@ -136,18 +168,40 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     }
     
     &.left {
-      left: 20px;
+      left: 15px;
     }
     
     &.right {
-      right: 20px;
+      right: 15px;
+    }
+    
+    @media (min-width: 390px) {
+      svg {
+        width: 75px;
+        height: 75px;
+      }
+    }
+    
+    @media (min-width: 430px) {
+      svg {
+        width: 80px;
+        height: 80px;
+      }
+      
+      &.left {
+        left: 20px;
+      }
+      
+      &.right {
+        right: 20px;
+      }
     }
   `;
   
   // You badge styles for the current player
   const youBadge = css`
     position: absolute;
-    top: -20px;
+    top: -22px;
     left: 50%;
     transform: translateX(-50%) rotate(${-rotationAngle}deg);
     background-color: #a47148;
@@ -191,23 +245,44 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
   // Ensure the index is within bounds and handle negative rotation
   const normalizedTopIndex = ((topPlayerIndex % queue.length) + queue.length) % queue.length;
   
-  // Calculate positions for circles
+  // Calculate responsive radius based on screen width
+  const getResponsiveRadius = (totalPlayers) => {
+    // Base radius values for different screen sizes
+    let baseRadius;
+    
+    // Get current viewport width
+    const viewportWidth = window.innerWidth;
+    
+    if (viewportWidth <= 375) {
+      baseRadius = 90; // iPhone SE, smaller devices
+    } else if (viewportWidth <= 390) {
+      baseRadius = 100; // iPhone 13/14 Pro
+    } else if (viewportWidth <= 414) {
+      baseRadius = 110; // iPhone Plus models
+    } else {
+      baseRadius = 120; // iPhone Pro Max, larger devices
+    }
+    
+    // Adjust radius based on number of players
+    if (totalPlayers <= 4) {
+      return baseRadius;
+    } else if (totalPlayers <= 6) {
+      return baseRadius * 0.95;
+    } else if (totalPlayers <= 8) {
+      return baseRadius * 0.9;
+    } else {
+      return baseRadius * 0.85; // Scale down for many players
+    }
+  };
+  
+  // Calculate positions for circles - ensure they don't get cut off
   const getCirclePosition = (index, totalPlayers) => {
     // Always position in a circle with equal spacing
     const angleInDegrees = (index * 360) / totalPlayers;
     const angleInRadians = (angleInDegrees * Math.PI) / 180;
     
-    // Adjust radius based on number of players to ensure they fit
-    let radius;
-    if (totalPlayers <= 4) {
-      radius = 120; // For 4 or fewer, use the standard cross layout radius
-    } else if (totalPlayers <= 8) {
-      radius = 140; // For 5-8 players, slightly larger radius
-    } else if (totalPlayers <= 12) {
-      radius = 155; // For 9-12 players, even larger radius
-    } else {
-      radius = 165; // For 13+ players, use maximum radius
-    }
+    // Get responsive radius
+    const radius = getResponsiveRadius(totalPlayers);
     
     // Calculate position using sine and cosine
     const x = radius * Math.sin(angleInRadians);
@@ -290,7 +365,7 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
             disabled={queue.length <= 1}
             aria-label="Previous player"
           >
-            <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M40 0L0 40L40 80" stroke="black" strokeWidth="5"/>
               <line x1="2" y1="40" x2="80" y2="40" stroke="black" strokeWidth="5"/>
             </svg>
@@ -301,7 +376,7 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
             disabled={queue.length <= 1}
             aria-label="Next player"
           >
-            <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M40 80L80 40L40 0" stroke="black" strokeWidth="5"/>
               <line x1="78" y1="40" x2="0" y2="40" stroke="black" strokeWidth="5"/>
             </svg>
