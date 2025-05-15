@@ -49,6 +49,14 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     }
   };
   
+  // Determine if current user is admin or moderator
+  const isCurrentUserAdminOrMod = 
+    (typeof isAdmin === 'function' && isAdmin(currentPlayer)) || 
+    (typeof isModerator === 'function' && isModerator(currentPlayer));
+  
+  // Check if current user is specifically an admin (for enhanced admin controls)
+  const isCurrentUserAdmin = typeof isAdmin === 'function' && isAdmin(currentPlayer);
+  
   // Main container styles - simplified and made responsive
   const container = css`
     position: relative;
@@ -69,6 +77,14 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     color: #59b368;
     text-align: center;
     margin: 20px 0;
+    
+    /* Special style for admin view */
+    ${isCurrentUserAdmin ? `
+      background-color: rgba(164, 113, 72, 0.1);
+      padding: 5px 20px;
+      border-radius: 20px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    ` : ''}
   `;
   
   // Carousel container
@@ -122,6 +138,16 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
       border: 3px solid #9c27b0;
     }
     
+    /* Enhanced admin/mod view of player circles */
+    ${isCurrentUserAdminOrMod ? `
+      cursor: pointer;
+      
+      &:hover {
+        transform: translate(-50%, -50%) scale(1.05);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+      }
+    ` : ''}
+    
     @media (min-width: 390px) {
       width: 115px;
       height: 115px;
@@ -147,19 +173,91 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     white-space: nowrap;
   `;
   
-  // Arrow button styles
-  const arrowButton = css`
-    background-color: transparent;
+  // Admin mode indicator
+  const adminModeIndicator = css`
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: #a47148;
+    color: white;
+    font-family: Poppins, sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 20px;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  `;
+  
+  // Admin controls container
+  const adminControls = css`
+    position: relative;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 5px;
+    padding: 5px;
+    z-index: 20;
+  `;
+  
+  // Admin/mod control buttons
+  const controlButton = css`
+    background-color: #8d9e78;
+    color: white;
     border: none;
+    border-radius: 20px;
+    padding: 6px 12px;
+    font-family: Poppins, sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      background-color: #768a62;
+      transform: translateY(-2px);
+    }
+    
+    &.danger {
+      background-color: #d67b7b;
+      
+      &:hover {
+        background-color: #c56c6c;
+      }
+    }
+  `;
+  
+  // Arrow button styles - enhanced for admin/mod view
+  const arrowButton = css`
+    background-color: ${isCurrentUserAdminOrMod ? '#a47148' : 'transparent'};
+    border: none;
+    border-radius: ${isCurrentUserAdminOrMod ? '50%' : '0'};
     cursor: pointer;
     position: absolute;
     bottom: 20px;
-    padding: 0;
+    padding: ${isCurrentUserAdminOrMod ? '10px' : '0'};
     z-index: 30;
+    box-shadow: ${isCurrentUserAdminOrMod ? '0 4px 8px rgba(0, 0, 0, 0.2)' : 'none'};
+    transition: all 0.2s ease;
     
     svg {
-      width: 70px;
-      height: 70px;
+      width: 60px;
+      height: 60px;
+      
+      path, line {
+        stroke: ${isCurrentUserAdminOrMod ? 'white' : 'black'};
+      }
+    }
+    
+    &:hover {
+      transform: ${isCurrentUserAdminOrMod ? 'scale(1.1)' : 'none'};
+      background-color: ${isCurrentUserAdminOrMod ? '#8a5d3b' : 'transparent'};
     }
     
     &:disabled {
@@ -177,15 +275,15 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     
     @media (min-width: 390px) {
       svg {
-        width: 75px;
-        height: 75px;
+        width: 65px;
+        height: 65px;
       }
     }
     
     @media (min-width: 430px) {
       svg {
-        width: 80px;
-        height: 80px;
+        width: 70px;
+        height: 70px;
       }
       
       &.left {
@@ -295,13 +393,18 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     };
   };
   
-  // Determine if the current user is an admin or moderator
-  const isCurrentUserAdminOrMod = 
-    (typeof isAdmin === 'function' && isAdmin(currentPlayer)) || 
-    (typeof isModerator === 'function' && isModerator(currentPlayer));
+  // Get the current "next" player (player at the top of the wheel)
+  const currentNextPlayer = queue[normalizedTopIndex];
   
   return (
     <div className={container}>
+      {/* Admin mode indicator - only visible for admins */}
+      {isCurrentUserAdmin && (
+        <div className={adminModeIndicator}>
+          <span>⚙️</span> Admin Mode
+        </div>
+      )}
+      
       {/* "UP NOW" label at the top */}
       <div className={upNowLabel}>UP NOW</div>
       
@@ -356,6 +459,20 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
         })}
       </div>
       
+      {/* Admin-specific controls */}
+      {isCurrentUserAdminOrMod && (
+        <div className={adminControls}>
+          <button className={controlButton}>
+            <span>🔄</span> Refresh
+          </button>
+          {isCurrentUserAdmin && (
+            <button className={`${controlButton} danger`}>
+              <span>🚫</span> Clear Queue
+            </button>
+          )}
+        </div>
+      )}
+      
       {/* Rotation arrows - only visible to admins and moderators */}
       {isCurrentUserAdminOrMod && (
         <>
@@ -366,8 +483,8 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
             aria-label="Previous player"
           >
             <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M40 0L0 40L40 80" stroke="black" strokeWidth="5"/>
-              <line x1="2" y1="40" x2="80" y2="40" stroke="black" strokeWidth="5"/>
+              <path d="M40 0L0 40L40 80" strokeWidth="5"/>
+              <line x1="2" y1="40" x2="80" y2="40" strokeWidth="5"/>
             </svg>
           </button>
           <button 
@@ -377,8 +494,8 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
             aria-label="Next player"
           >
             <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M40 80L80 40L40 0" stroke="black" strokeWidth="5"/>
-              <line x1="78" y1="40" x2="0" y2="40" stroke="black" strokeWidth="5"/>
+              <path d="M40 80L80 40L40 0" strokeWidth="5"/>
+              <line x1="78" y1="40" x2="0" y2="40" strokeWidth="5"/>
             </svg>
           </button>
         </>
