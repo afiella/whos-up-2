@@ -211,6 +211,11 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
   
   // We'll show only up to 4 players at a time in the cross formation
   const visiblePlayers = queue.length > 4 ? 4 : queue.length;
+
+  // Check if current user is admin or moderator
+  const isCurrentUserAdminOrMod = 
+    (typeof isAdmin === 'function' && isAdmin(currentPlayer)) || 
+    (typeof isModerator === 'function' && isModerator(currentPlayer));
   
   return (
     <div className={container}>
@@ -272,8 +277,7 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
       </div>
       
       {/* Rotation arrows - only visible to admins and moderators */}
-      {(moderator || (typeof isAdmin === 'function' && isAdmin(currentPlayer)) || 
-         (typeof isModerator === 'function' && isModerator(currentPlayer))) && (
+      {isCurrentUserAdminOrMod && (
         <>
           <button 
             className={`${arrowButton} left`} 
