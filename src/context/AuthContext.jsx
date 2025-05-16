@@ -34,7 +34,7 @@ export function AuthProvider({ children }) {
     if (password === ADMIN_PASSWORD) {
       const adminData = {
         username: 'admin',
-        displayName: 'Administrator',
+        displayName: 'Ella',
         isAdmin: true,
         isModerator: true
       };
@@ -123,7 +123,7 @@ export function AuthProvider({ children }) {
       const moderatorsList = [{
         id: 'admin',
         username: 'admin',
-        displayName: 'Administrator',
+        displayName: 'Ella',
         isAdmin: true
       }];
       
