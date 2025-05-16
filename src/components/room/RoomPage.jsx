@@ -561,7 +561,7 @@ export default function RoomPage({ roomId, roomName }) {
       // Add history entry with timestamp details and moderator action
       addHistoryEntry('wentOnAppointment', playerName, { 
         timestamp,
-        actionBy: moderator?.displayName || currentPlayer
+        actionBy: moderator?.displayName || playerName // Fixed: using playerName instead of currentPlayer
       });
     } catch (error) {
       console.error('Error moving player to appointment:', error);
@@ -590,11 +590,11 @@ export default function RoomPage({ roomId, roomName }) {
       // Add appropriate history entry
       if (wasOnAppointment) {
         addHistoryEntry('returnedFromAppointment', playerName, {
-          actionBy: moderator?.displayName || currentPlayer
+          actionBy: moderator?.displayName || playerName // Fixed: using playerName instead of currentPlayer
         });
       } else {
         addHistoryEntry('joinedQueue', playerName, {
-          actionBy: moderator?.displayName || currentPlayer
+          actionBy: moderator?.displayName || playerName // Fixed: using playerName instead of currentPlayer
         });
       }
     } catch (error) {
@@ -618,7 +618,7 @@ export default function RoomPage({ roomId, roomName }) {
       
       // Add history entry
       addHistoryEntry('wentOutOfRotation', playerName, {
-        actionBy: moderator?.displayName || currentPlayer
+        actionBy: moderator?.displayName || playerName // Fixed: using playerName instead of currentPlayer
       });
     } catch (error) {
       console.error('Error moving player to out of rotation:', error);
@@ -642,7 +642,7 @@ export default function RoomPage({ roomId, roomName }) {
         
         // Add history entry
         addHistoryEntry('leftGame', playerName, {
-          actionBy: moderator?.displayName || currentPlayer
+          actionBy: moderator?.displayName || playerName // Fixed: using playerName instead of currentPlayer
         });
       }
     } catch (error) {
