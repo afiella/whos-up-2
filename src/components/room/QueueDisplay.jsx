@@ -4,7 +4,16 @@ import { css } from '@emotion/css';
 import ModeratorBadge from '../ui/ModeratorBadge';
 import AdminBadge from '../ui/AdminBadge';
 
-export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmin, isOnAppointment, getAppointmentTime }) {
+export default function QueueDisplay({ 
+  queue, 
+  currentPlayer, 
+  isModerator, 
+  isAdmin, 
+  isOnAppointment, 
+  getAppointmentTime,
+  onSaveAndClearHistory,
+  history
+}) {
   // State to track rotation angle
   const [rotationAngle, setRotationAngle] = useState(0);
   // Reference to track previous queue length for animations
@@ -56,6 +65,16 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
   
   // Check if current user is specifically an admin (for enhanced admin controls)
   const isCurrentUserAdmin = typeof isAdmin === 'function' && isAdmin(currentPlayer);
+  
+  // Function to handle saving and clearing history
+  const handleSaveAndClearHistory = () => {
+    if (typeof onSaveAndClearHistory === 'function') {
+      // Confirm before proceeding
+      if (window.confirm('Save current activity history to archive and clear it? This action cannot be undone.')) {
+        onSaveAndClearHistory();
+      }
+    }
+  };
   
   // Main container styles - simplified and made responsive
   const container = css`
@@ -197,6 +216,7 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     width: 100%;
     display: flex;
     justify-content: center;
+    flex-wrap: wrap;
     gap: 10px;
     margin-top: 5px;
     padding: 5px;
@@ -230,6 +250,20 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
       &:hover {
         background-color: #c56c6c;
       }
+    }
+    
+    &.archive {
+      background-color: #7b68ee; // Purple color for archive actions
+      
+      &:hover {
+        background-color: #6a5acd;
+      }
+    }
+    
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
     }
   `;
   
@@ -393,9 +427,6 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
     };
   };
   
-  // Get the current "next" player (player at the top of the wheel)
-  const currentNextPlayer = queue[normalizedTopIndex];
-  
   return (
     <div className={container}>
       {/* Admin mode indicator - only visible for admins */}
@@ -466,9 +497,18 @@ export default function QueueDisplay({ queue, currentPlayer, isModerator, isAdmi
             <span>🔄</span> Refresh
           </button>
           {isCurrentUserAdmin && (
-            <button className={`${controlButton} danger`}>
-              <span>🚫</span> Clear Queue
-            </button>
+            <>
+              <button 
+                className={`${controlButton} archive`}
+                onClick={handleSaveAndClearHistory}
+                disabled={!history || history.length === 0}
+              >
+                <span>📁</span> Archive & Clear History
+              </button>
+              <button className={`${controlButton} danger`}>
+                <span>🚫</span> Clear Queue
+              </button>
+            </>
           )}
         </div>
       )}

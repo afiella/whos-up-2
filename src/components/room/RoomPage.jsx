@@ -7,7 +7,6 @@ import { doc, onSnapshot, updateDoc, arrayUnion, arrayRemove, serverTimestamp, g
 import { useAuth } from '../../context/AuthContext';
 import ModeratorBadge from '../ui/ModeratorBadge';
 import QueueDisplay from './QueueDisplay';
-import ModeratorQueueControl from './ModeratorQueueControl';
 import AdminBadge from '../ui/AdminBadge';
 import ActivityHistory from './ActivityHistory';
 
@@ -70,6 +69,30 @@ export default function RoomPage({ roomId, roomName }) {
     } catch (error) {
       console.error("Error saving history to archive:", error);
       return false;
+    }
+  };
+
+  // Function for admins to save and clear history
+  const saveAndClearHistory = async () => {
+    try {
+      // First, save history to archive
+      const archiveSuccess = await saveHistoryToArchive();
+      
+      if (archiveSuccess) {
+        // Then clear the history in the current room
+        const roomRef = doc(db, 'rooms', roomId);
+        await updateDoc(roomRef, {
+          history: []
+        });
+        
+        // Show confirmation to user
+        alert('Activity history has been archived and cleared successfully.');
+      } else {
+        alert('Failed to archive history. History was not cleared.');
+      }
+    } catch (error) {
+      console.error('Error saving and clearing history:', error);
+      alert('An error occurred while trying to archive and clear history.');
     }
   };
   
@@ -621,19 +644,19 @@ export default function RoomPage({ roomId, roomName }) {
   `;
   
   const buttonGroup = css`
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background-color: #fff8f0;
-  padding: 1rem;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-  justify-content: center;
-  z-index: 100;
-`;
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #fff8f0;
+    padding: 1rem;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    justify-content: center;
+    z-index: 100;
+  `;
   
   const button = css`
     background-color: #d67b7b;
@@ -743,34 +766,18 @@ export default function RoomPage({ roomId, roomName }) {
         </div>
       </div>
     
-      {/* Queue Display */}
-      <div className={card}>
-        <div className={cardTitle}>Current Queue</div>
-        <QueueDisplay 
-  queue={queue}
-  currentPlayer={playerName}
-  isModerator={isModerator}
-  isAdmin={isAdmin}
-  isOnAppointment={isOnAppointment}
-  getAppointmentTime={getAppointmentTime}
-/>
-      </div>
+      {/* Queue Display - removed the card container to allow full display */}
+      <QueueDisplay 
+        queue={queue}
+        currentPlayer={playerName}
+        isModerator={isModerator}
+        isAdmin={isAdmin}
+        isOnAppointment={isOnAppointment}
+        getAppointmentTime={getAppointmentTime}
+        onSaveAndClearHistory={saveAndClearHistory}
+        history={history}
+      />
 
-      {/* Moderator Queue Control */}
-      {moderator && queue.length > 0 && (
-        <div className={card}>
-          <ModeratorQueueControl
-            queue={queue}
-            currentPlayer={playerName}
-            isModerator={isModerator}
-            isAdmin={isAdmin}
-            isOnAppointment={isOnAppointment}
-            getAppointmentTime={getAppointmentTime}
-            onReorder={handleQueueReorder}
-          />
-        </div>
-      )}
-      
       {/* Out of Rotation Players */}
       <div className={card}>
         <div className={cardTitle}>Out of Rotation ({outOfRotationPlayers.length})</div>
@@ -861,7 +868,7 @@ export default function RoomPage({ roomId, roomName }) {
         />
       </div>
       
-      {/* Action Buttons - At bottom of screen (without the Leave button) */}
+      {/* Action Buttons - At bottom of screen */}
       <div className={buttonGroup}>
         <button
           className={button}
@@ -884,7 +891,7 @@ export default function RoomPage({ roomId, roomName }) {
         >
           Out
         </button>
-        {/* New Appointment Button with Calendar Icon */}
+        {/* Appointment Button with Calendar Icon */}
         <button
           className={`${button} appointment`}
           onClick={handleOnAppointment}
