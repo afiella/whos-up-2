@@ -12,7 +12,12 @@ export default function QueueDisplay({
   isOnAppointment, 
   getAppointmentTime,
   onSaveAndClearHistory,
-  history
+  history,
+  // New props for player management
+  onMoveToAppointment,
+  onMoveToQueue,
+  onMoveToOutOfRotation,
+  onRemovePlayer
 }) {
   // State to track rotation angle
   const [rotationAngle, setRotationAngle] = useState(0);
@@ -20,6 +25,10 @@ export default function QueueDisplay({
   const prevQueueLengthRef = useRef(queue.length);
   // Animation state
   const [isAnimating, setIsAnimating] = useState(false);
+  
+  // New state for player management modal
+  const [showPlayerModal, setShowPlayerModal] = useState(false);
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
   
   // Handle queue changes - reset rotation and animate when new players join
   useEffect(() => {
@@ -56,6 +65,40 @@ export default function QueueDisplay({
     if (queue.length > 1) {
       setRotationAngle(prevAngle => prevAngle - (360 / queue.length));
     }
+  };
+  
+  // Handle player click - open management modal
+  const handlePlayerClick = (player) => {
+    // Only moderators and admins can manage players
+    if ((typeof isModerator === 'function' && isModerator(currentPlayer)) || 
+        (typeof isAdmin === 'function' && isAdmin(currentPlayer))) {
+      setSelectedPlayer(player);
+      setShowPlayerModal(true);
+    }
+  };
+  
+  // Handle player management actions
+  const handlePlayerAction = (action) => {
+    if (!selectedPlayer) return;
+    
+    switch (action) {
+      case 'appointment':
+        onMoveToAppointment(selectedPlayer);
+        break;
+      case 'queue':
+        onMoveToQueue(selectedPlayer);
+        break;
+      case 'outOfRotation':
+        onMoveToOutOfRotation(selectedPlayer);
+        break;
+      case 'remove':
+        onRemovePlayer(selectedPlayer);
+        break;
+      default:
+        break;
+    }
+    
+    setShowPlayerModal(false);
   };
   
   // Determine if current user is admin or moderator
@@ -363,6 +406,61 @@ export default function QueueDisplay({
     z-index: 2;
   `;
   
+  // Button styles for the player management modal
+  const button = css`
+    background-color: #d67b7b;
+    color: white;
+    border: none;
+    border-radius: 1rem;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    font-family: Poppins, sans-serif;
+    font-size: 0.875rem;
+    cursor: pointer;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: background-color 0.2s;
+    
+    &:hover {
+      background-color: #c56c6c;
+    }
+    
+    &.secondary {
+      background-color: #8d9e78;
+      
+      &:hover {
+        background-color: #768a62;
+      }
+    }
+    
+    &.tertiary {
+      background-color: #a47148;
+      
+      &:hover {
+        background-color: #8a5d3b;
+      }
+    }
+
+    &.danger {
+      background-color: #b71c1c;
+      
+      &:hover {
+        background-color: #8e0000;
+      }
+    }
+    
+    &.appointment {
+      background-color: #9c27b0;
+      
+      &:hover {
+        background-color: #7b1fa2;
+      }
+    }
+  `;
+  
   // Empty state message
   if (queue.length === 0) {
     return (
@@ -454,6 +552,7 @@ export default function QueueDisplay({
                 isOnAppointment && isOnAppointment(player) ? 'on-appointment' : ''
               }`}
               style={getCirclePosition(visualIndex, queue.length)}
+              onClick={() => handlePlayerClick(player)}
             >
               {/* "YOU" badge for the current player */}
               {player === currentPlayer && (
@@ -539,6 +638,80 @@ export default function QueueDisplay({
             </svg>
           </button>
         </>
+      )}
+
+      {/* Player Management Modal */}
+      {showPlayerModal && selectedPlayer && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1000
+          }}
+          onClick={() => setShowPlayerModal(false)}
+        >
+          <div
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '1rem',
+              padding: '1.5rem',
+              width: '90%',
+              maxWidth: '300px',
+              boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{
+              fontFamily: 'Poppins, sans-serif',
+              color: '#4b3b2b',
+              textAlign: 'center',
+              margin: '0 0 1rem 0'
+            }}>
+              Manage {selectedPlayer}
+            </h3>
+            
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.5rem'
+            }}>
+              <button
+                className={`${button} secondary`}
+                onClick={() => handlePlayerAction('queue')}
+              >
+                Move to Queue
+              </button>
+              
+              <button
+                className={`${button} appointment`}
+                onClick={() => handlePlayerAction('appointment')}
+              >
+                <span role="img" aria-label="Calendar">📅</span> Move to Appointment
+              </button>
+              
+              <button
+                className={`${button} tertiary`}
+                onClick={() => handlePlayerAction('outOfRotation')}
+              >
+                Move to Out of Rotation
+              </button>
+              
+              <button
+                className={`${button} danger`}
+                onClick={() => handlePlayerAction('remove')}
+              >
+                Remove from Game
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

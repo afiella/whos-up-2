@@ -526,6 +526,130 @@ export default function RoomPage({ roomId, roomName }) {
     URL.revokeObjectURL(url);
   };
 
+  // NEW FUNCTION: Move a player to appointment status (for moderator use)
+  const handleMoveToAppointment = async (playerName) => {
+    try {
+      const roomRef = doc(db, 'rooms', roomId);
+      
+      // Get current timestamp in format: "3:45 PM"
+      const now = new Date();
+      const timestamp = now.toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit', 
+        hour12: true 
+      });
+      
+      // Create the appointment object with name and timestamp
+      const appointmentData = {
+        name: playerName,
+        timestamp: timestamp
+      };
+      
+      // First remove any existing appointment for this player
+      const currentBusyPlayers = (await getDoc(roomRef)).data()?.busyPlayers || [];
+      const updatedBusyPlayers = currentBusyPlayers.filter(item => 
+        typeof item === 'object' ? item.name !== playerName : item !== playerName
+      );
+      
+      // Remove from queue and outOfRotation if present, then add the new appointment data
+      await updateDoc(roomRef, {
+        busyPlayers: [...updatedBusyPlayers, appointmentData],
+        queue: arrayRemove(playerName),
+        outOfRotationPlayers: arrayRemove(playerName)
+      });
+      
+      // Add history entry with timestamp details and moderator action
+      addHistoryEntry('wentOnAppointment', playerName, { 
+        timestamp,
+        actionBy: moderator?.displayName || currentPlayer
+      });
+    } catch (error) {
+      console.error('Error moving player to appointment:', error);
+    }
+  };
+
+  // NEW FUNCTION: Move a player to queue (for moderator use)
+  const handleMoveToQueue = async (playerName) => {
+    try {
+      const roomRef = doc(db, 'rooms', roomId);
+      
+      // Determine if player is coming back from appointment
+      const wasOnAppointment = busyPlayers.some(item => 
+        typeof item === 'object' ? item.name === playerName : item === playerName
+      );
+      
+      // Update status in Firestore
+      await updateDoc(roomRef, {
+        queue: arrayUnion(playerName),
+        outOfRotationPlayers: arrayRemove(playerName),
+        busyPlayers: arrayRemove(...busyPlayers.filter(item => 
+          typeof item === 'object' ? item.name === playerName : item === playerName
+        ))
+      });
+      
+      // Add appropriate history entry
+      if (wasOnAppointment) {
+        addHistoryEntry('returnedFromAppointment', playerName, {
+          actionBy: moderator?.displayName || currentPlayer
+        });
+      } else {
+        addHistoryEntry('joinedQueue', playerName, {
+          actionBy: moderator?.displayName || currentPlayer
+        });
+      }
+    } catch (error) {
+      console.error('Error moving player to queue:', error);
+    }
+  };
+
+  // NEW FUNCTION: Move a player to out of rotation (for moderator use)
+  const handleMoveToOutOfRotation = async (playerName) => {
+    try {
+      const roomRef = doc(db, 'rooms', roomId);
+      
+      // Update status in Firestore
+      await updateDoc(roomRef, {
+        outOfRotationPlayers: arrayUnion(playerName),
+        queue: arrayRemove(playerName),
+        busyPlayers: arrayRemove(...busyPlayers.filter(item => 
+          typeof item === 'object' ? item.name === playerName : item === playerName
+        ))
+      });
+      
+      // Add history entry
+      addHistoryEntry('wentOutOfRotation', playerName, {
+        actionBy: moderator?.displayName || currentPlayer
+      });
+    } catch (error) {
+      console.error('Error moving player to out of rotation:', error);
+    }
+  };
+
+  // NEW FUNCTION: Remove a player from the game completely (for moderator use)
+  const handleRemovePlayer = async (playerName) => {
+    try {
+      if (window.confirm(`Are you sure you want to remove ${playerName} from the game?`)) {
+        const roomRef = doc(db, 'rooms', roomId);
+        
+        // Update Firestore to remove player from all arrays
+        await updateDoc(roomRef, {
+          queue: arrayRemove(playerName),
+          outOfRotationPlayers: arrayRemove(playerName),
+          busyPlayers: arrayRemove(...busyPlayers.filter(item => 
+            typeof item === 'object' ? item.name === playerName : item === playerName
+          ))
+        });
+        
+        // Add history entry
+        addHistoryEntry('leftGame', playerName, {
+          actionBy: moderator?.displayName || currentPlayer
+        });
+      }
+    } catch (error) {
+      console.error('Error removing player from game:', error);
+    }
+  };
+
   // Helper functions to identify admins and moderators
   const isAdmin = (name) => {
     return moderator?.isAdmin && name === moderator.displayName;
@@ -766,7 +890,7 @@ export default function RoomPage({ roomId, roomName }) {
         </div>
       </div>
     
-      {/* Queue Display - removed the card container to allow full display */}
+      {/* Queue Display with new player management props */}
       <QueueDisplay 
         queue={queue}
         currentPlayer={playerName}
@@ -776,6 +900,11 @@ export default function RoomPage({ roomId, roomName }) {
         getAppointmentTime={getAppointmentTime}
         onSaveAndClearHistory={saveAndClearHistory}
         history={history}
+        // New props for player management
+        onMoveToAppointment={handleMoveToAppointment}
+        onMoveToQueue={handleMoveToQueue}
+        onMoveToOutOfRotation={handleMoveToOutOfRotation}
+        onRemovePlayer={handleRemovePlayer}
       />
 
       {/* Out of Rotation Players */}
