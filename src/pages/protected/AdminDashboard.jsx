@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { css } from '@emotion/css';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../firebase/config';
-import { doc, onSnapshot, updateDoc, arrayRemove, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc, arrayRemove, getDoc, deleteDoc } from 'firebase/firestore';
 
 export default function AdminDashboard() {
   const { moderator, logout, registerModerator, fetchModerators } = useAuth();
@@ -27,6 +27,11 @@ export default function AdminDashboard() {
   // List of moderators (admin only)
   const [moderators, setModerators] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Moderator management
+  const [showModeratorDetails, setShowModeratorDetails] = useState(false);
+  const [selectedModerator, setSelectedModerator] = useState(null);
+  const [moderatorDetails, setModeratorDetails] = useState(null);
 
   // Load rooms data
   useEffect(() => {
@@ -90,6 +95,61 @@ export default function AdminDashboard() {
       setLoading(false);
     }
   }, [moderator, fetchModerators]);
+
+  // Fetch moderator details
+  const fetchModeratorDetails = async (moderatorId) => {
+    try {
+      if (moderatorId === 'admin') {
+        // For admin user, just display hardcoded credentials
+        setModeratorDetails({
+          username: 'admin',
+          displayName: 'Ella',
+          password: 'afiella', // This is from the hardcoded ADMIN_PASSWORD in AuthContext
+          isAdmin: true
+        });
+        return;
+      }
+      
+      const moderatorDoc = await getDoc(doc(db, 'moderators', moderatorId));
+      if (moderatorDoc.exists()) {
+        setModeratorDetails(moderatorDoc.data());
+      } else {
+        setMessage('Moderator details not found');
+        setMessageType('error');
+      }
+    } catch (error) {
+      console.error('Error fetching moderator details:', error);
+      setMessage('Error loading moderator details');
+      setMessageType('error');
+    }
+  };
+
+  // Remove moderator
+  const handleRemoveModerator = async (moderatorId) => {
+    if (moderatorId === 'admin') {
+      setMessage('Cannot remove the admin account');
+      setMessageType('error');
+      return;
+    }
+    
+    if (window.confirm(`Are you sure you want to remove ${selectedModerator.displayName}? This action cannot be undone.`)) {
+      try {
+        await deleteDoc(doc(db, 'moderators', moderatorId));
+        
+        // Refresh the moderator list
+        const fetchedModerators = await fetchModerators();
+        setModerators(fetchedModerators);
+        
+        setMessage(`${selectedModerator.displayName} has been removed`);
+        setMessageType('success');
+        setShowModeratorDetails(false);
+      } catch (error) {
+        console.error('Error removing moderator:', error);
+        setMessage('Error removing moderator');
+        setMessageType('error');
+      }
+    }
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -423,6 +483,13 @@ export default function AdminDashboard() {
           <span role="img" aria-label="Settings">⚙️</span> Settings
         </button>
       </div>
+
+      {/* Display success/error messages */}
+      {message && (
+        <div className={`${messageDisplay} ${messageType}`}>
+          {message}
+        </div>
+      )}
       
       {/* Welcome Card */}
       <div className={card}>
@@ -432,6 +499,164 @@ export default function AdminDashboard() {
         <p>
           You are logged in as an admin. You can manage moderators, rooms, and access all features.
         </p>
+      </div>
+      
+      {/* Moderator Management Section */}
+      <div className={card}>
+        <div className={cardTitle}>Manage Moderators</div>
+        
+        {moderators.length > 0 ? (
+          <div>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left', padding: '0.5rem', borderBottom: '1px solid #eee' }}>Username</th>
+                  <th style={{ textAlign: 'left', padding: '0.5rem', borderBottom: '1px solid #eee' }}>Display Name</th>
+                  <th style={{ textAlign: 'left', padding: '0.5rem', borderBottom: '1px solid #eee' }}>Role</th>
+                  <th style={{ textAlign: 'left', padding: '0.5rem', borderBottom: '1px solid #eee' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {moderators.map((mod) => (
+                  <tr key={mod.id}>
+                    <td style={{ padding: '0.5rem', borderBottom: '1px solid #eee' }}>{mod.username}</td>
+                    <td style={{ padding: '0.5rem', borderBottom: '1px solid #eee' }}>{mod.displayName}</td>
+                    <td style={{ padding: '0.5rem', borderBottom: '1px solid #eee' }}>
+                      {mod.isAdmin ? (
+                        <span style={{ 
+                          backgroundColor: '#d67b7b', 
+                          color: 'white', 
+                          padding: '0.2rem 0.5rem', 
+                          borderRadius: '0.25rem',
+                          fontSize: '0.75rem'
+                        }}>
+                          Admin
+                        </span>
+                      ) : (
+                        <span style={{ 
+                          backgroundColor: '#a47148', 
+                          color: 'white', 
+                          padding: '0.2rem 0.5rem', 
+                          borderRadius: '0.25rem',
+                          fontSize: '0.75rem'
+                        }}>
+                          Moderator
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ padding: '0.5rem', borderBottom: '1px solid #eee' }}>
+                      <button 
+                        className={button}
+                        style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem' }}
+                        onClick={() => {
+                          setSelectedModerator(mod);
+                          fetchModeratorDetails(mod.id);
+                          setShowModeratorDetails(true);
+                        }}
+                      >
+                        View Details
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            
+            {/* Moderator Details Modal */}
+            {showModeratorDetails && selectedModerator && moderatorDetails && (
+              <div 
+                style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  zIndex: 1000
+                }}
+              >
+                <div 
+                  style={{
+                    backgroundColor: 'white',
+                    borderRadius: '1rem',
+                    padding: '2rem',
+                    width: '100%',
+                    maxWidth: '500px',
+                    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)'
+                  }}
+                >
+                  <h3 style={{ 
+                    fontFamily: 'Poppins, sans-serif', 
+                    color: '#4b3b2b',
+                    marginTop: 0,
+                    borderBottom: '1px solid #eee',
+                    paddingBottom: '0.5rem'
+                  }}>
+                    {selectedModerator.displayName} Details
+                  </h3>
+                  
+                  <div style={{ marginBottom: '1rem' }}>
+                    <strong>Username:</strong> {moderatorDetails.username}
+                  </div>
+                  
+                  <div style={{ marginBottom: '1rem' }}>
+                    <strong>Display Name:</strong> {moderatorDetails.displayName}
+                  </div>
+                  
+                  <div style={{ marginBottom: '1rem' }}>
+                    <strong>Password:</strong> {moderatorDetails.password}
+                  </div>
+                  
+                  {moderatorDetails.email && (
+                    <div style={{ marginBottom: '1rem' }}>
+                      <strong>Email:</strong> {moderatorDetails.email}
+                    </div>
+                  )}
+                  
+                  <div style={{ marginBottom: '1rem' }}>
+                    <strong>Role:</strong> {selectedModerator.isAdmin ? 'Admin' : 'Moderator'}
+                  </div>
+                  
+                  {moderatorDetails.assignedRoom && (
+                    <div style={{ marginBottom: '1rem' }}>
+                      <strong>Assigned Room:</strong> {moderatorDetails.assignedRoom}
+                    </div>
+                  )}
+                  
+                  {moderatorDetails.createdAt && (
+                    <div style={{ marginBottom: '1rem' }}>
+                      <strong>Created:</strong> {new Date(moderatorDetails.createdAt).toLocaleString()}
+                    </div>
+                  )}
+                  
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.5rem' }}>
+                    {!selectedModerator.isAdmin && (
+                      <button 
+                        className={button}
+                        style={{ backgroundColor: '#d67b7b' }}
+                        onClick={() => handleRemoveModerator(selectedModerator.id)}
+                      >
+                        Remove Moderator
+                      </button>
+                    )}
+                    <button 
+                      className={button}
+                      style={{ backgroundColor: '#8d9e78' }}
+                      onClick={() => setShowModeratorDetails(false)}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div>No moderators found</div>
+        )}
       </div>
       
       {/* Room Overview */}
@@ -527,11 +752,7 @@ export default function AdminDashboard() {
           </button>
         </form>
         
-        {message && (
-          <div className={`${messageDisplay} ${messageType}`}>
-            {message}
-          </div>
-        )}
+        {/* Message is displayed at the top of the page now */}
       </div>
     </div>
   );
