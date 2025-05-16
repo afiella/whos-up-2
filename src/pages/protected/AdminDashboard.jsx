@@ -21,6 +21,7 @@ export default function AdminDashboard() {
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newDisplayName, setNewDisplayName] = useState('');
+  const [newAssignedRoom, setNewAssignedRoom] = useState('');
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState(''); // 'success' or 'error'
   
@@ -159,37 +160,46 @@ export default function AdminDashboard() {
   const handleAddModerator = async (e) => {
     e.preventDefault();
     
-    if (!newUsername || !newPassword || !newDisplayName) {
-      setMessage('All fields are required');
+    if (!newUsername || !newPassword || !newDisplayName || !newAssignedRoom) {
+      setMessage('All fields are required, including assigned room');
       setMessageType('error');
       return;
     }
     
-    // Create new moderator object
+    // Create new moderator object with assignedRoom
     const newModerator = {
       username: newUsername,
       password: newPassword,
       displayName: newDisplayName,
       email: `${newUsername}@whosup.com`, // Generate an email
+      assignedRoom: newAssignedRoom, // Include the assigned room
       isModerator: true
     };
     
-    const result = await registerModerator(newModerator);
-    
-    if (result.success) {
-      setMessage(`${newDisplayName} added successfully!`);
-      setMessageType('success');
+    try {
+      const result = await registerModerator(newModerator);
       
-      // Clear form fields
-      setNewUsername('');
-      setNewPassword('');
-      setNewDisplayName('');
-      
-      // Refresh the moderator list
-      const fetchedModerators = await fetchModerators();
-      setModerators(fetchedModerators);
-    } else {
-      setMessage(result.message);
+      if (result.success) {
+        setMessage(`${newDisplayName} added successfully!`);
+        setMessageType('success');
+        
+        // Clear form fields
+        setNewUsername('');
+        setNewPassword('');
+        setNewDisplayName('');
+        setNewAssignedRoom('');
+        
+        // Refresh the moderator list
+        const fetchedModerators = await fetchModerators();
+        setModerators(fetchedModerators);
+      } else {
+        console.error('Error from registerModerator:', result);
+        setMessage(result.message || 'Failed to add moderator');
+        setMessageType('error');
+      }
+    } catch (error) {
+      console.error('Exception in handleAddModerator:', error);
+      setMessage(`Error: ${error.message}`);
       setMessageType('error');
     }
   };
@@ -747,12 +757,24 @@ export default function AdminDashboard() {
             />
           </div>
           
+          <div className={formGroup}>
+            <label className={label}>Assigned Room</label>
+            <select
+              className={input}
+              value={newAssignedRoom}
+              onChange={(e) => setNewAssignedRoom(e.target.value)}
+            >
+              <option value="">Select a room</option>
+              <option value="bh">BH Room</option>
+              <option value="59">59 Room</option>
+              <option value="ashland">Ashland Room</option>
+            </select>
+          </div>
+          
           <button type="submit" className={button}>
             Add Moderator
           </button>
         </form>
-        
-        {/* Message is displayed at the top of the page now */}
       </div>
     </div>
   );
