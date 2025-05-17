@@ -17,11 +17,17 @@ export default function PlayerManagement() {
   const [actionMessage, setActionMessage] = useState('');
   const [messageType, setMessageType] = useState('');
   
-  // New states for adding players
+  // Add player form states
   const [newPlayerName, setNewPlayerName] = useState('');
   const [newPlayerRoom, setNewPlayerRoom] = useState('');
   const [newPlayerStatus, setNewPlayerStatus] = useState('queue');
   
+  // Collapse states for sections
+  const [addPlayerCollapsed, setAddPlayerCollapsed] = useState(true);
+  const [queueCollapsed, setQueueCollapsed] = useState(false);
+  const [outOfRotationCollapsed, setOutOfRotationCollapsed] = useState(false);
+  const [appointmentCollapsed, setAppointmentCollapsed] = useState(false);
+
   // Fetch room data
   useEffect(() => {
     const fetchRoomData = async () => {
@@ -188,7 +194,7 @@ export default function PlayerManagement() {
     }
   };
   
-  // New function to add a player to a room
+  // Add a player to a room
   const handleAddPlayer = async (e) => {
     e.preventDefault();
     
@@ -325,6 +331,7 @@ export default function PlayerManagement() {
       
       // Clear form
       setNewPlayerName('');
+      setAddPlayerCollapsed(true);
       
     } catch (error) {
       console.error('Error adding player:', error);
@@ -333,20 +340,31 @@ export default function PlayerManagement() {
     }
   };
 
-  // Styling
+  // Helper function to get player name from player data (string or object)
+  const getPlayerName = (playerData) => {
+    return typeof playerData === 'object' ? playerData.name : playerData;
+  };
+  
+  const roomDisplayNames = {
+    'bh': 'BH Room',
+    '59': '59 Room',
+    'ashland': 'Ashland Room'
+  };
+
+  // Styling - Mobile Optimized
   const container = css`
     background-color: white;
     border-radius: 1rem;
-    padding: 1.5rem;
-    margin-bottom: 2rem;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   `;
   
   const header = css`
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
   `;
   
   const title = css`
@@ -362,17 +380,20 @@ export default function PlayerManagement() {
   
   const roomTabs = css`
     display: flex;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-    border-bottom: 1px solid #eee;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    overflow-x: auto;
     padding-bottom: 0.5rem;
+    -webkit-overflow-scrolling: touch;
   `;
   
   const roomTab = css`
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 1rem;
     cursor: pointer;
     font-family: Poppins, sans-serif;
+    font-size: 0.875rem;
+    white-space: nowrap;
     transition: all 0.2s;
     
     &.active {
@@ -385,23 +406,28 @@ export default function PlayerManagement() {
     }
   `;
   
-  const sectionTitle = css`
+  const sectionHeader = css`
     font-family: Poppins, sans-serif;
     font-weight: 600;
     font-size: 1rem;
     color: #4b3b2b;
-    margin: 1.5rem 0 1rem;
+    padding: 0.75rem;
+    background-color: #f9f9f9;
+    border-radius: 0.75rem;
+    margin-bottom: 0.5rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    cursor: pointer;
+    user-select: none;
   `;
   
   const clearButton = css`
     background-color: #b71c1c;
     color: white;
     border: none;
-    border-radius: 0.5rem;
-    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    padding: 0.5rem 0.75rem;
     font-family: Poppins, sans-serif;
     font-size: 0.75rem;
     cursor: pointer;
@@ -415,7 +441,7 @@ export default function PlayerManagement() {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
   `;
   
   const playerItem = css`
@@ -424,19 +450,25 @@ export default function PlayerManagement() {
     align-items: center;
     padding: 0.75rem;
     background-color: #f6f6f6;
-    border-radius: 0.5rem;
+    border-radius: 0.75rem;
     font-family: Poppins, sans-serif;
+    font-size: 0.9rem;
   `;
   
   const actionButton = css`
     background-color: #d67b7b;
     color: white;
     border: none;
-    border-radius: 0.5rem;
-    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    padding: 0.5rem 0.75rem;
     font-family: Poppins, sans-serif;
     font-size: 0.75rem;
     cursor: pointer;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     
     &:hover {
       background-color: #c56c6c;
@@ -445,9 +477,10 @@ export default function PlayerManagement() {
   
   const messageDisplay = css`
     padding: 0.75rem;
-    border-radius: 0.5rem;
+    border-radius: 0.75rem;
     margin-bottom: 1rem;
     font-family: Poppins, sans-serif;
+    text-align: center;
     
     &.success {
       background-color: #e0f2e9;
@@ -460,32 +493,47 @@ export default function PlayerManagement() {
     }
   `;
   
-  const card = css`
-    background-color: #f6dfdf;
-    border-radius: 1rem;
-    padding: 1.5rem;
-    margin-bottom: 2rem;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-  `;
-  
-  // Add the missing cardTitle CSS class definition
-  const cardTitle = css`
-    font-family: Poppins, sans-serif;
-    font-weight: 600;
-    font-size: 1.25rem;
-    color: #4b3b2b;
+  const collapsibleSection = css`
     margin-bottom: 1rem;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    background-color: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   `;
   
-  const formRow = css`
+  const sectionContent = css`
+    padding: 0.75rem;
+  `;
+  
+  const addPlayerButton = css`
+    background-color: #8d9e78;
+    color: white;
+    border: none;
+    border-radius: 1rem;
+    padding: 0.75rem;
+    font-family: Poppins, sans-serif;
+    font-size: 0.875rem;
+    cursor: pointer;
+    width: 100%;
     display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    
+    &:hover {
+      background-color: #768a62;
+    }
+  `;
+  
+  const form = css`
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
   `;
   
   const formGroup = css`
-    flex: 1;
-    min-width: 200px;
+    width: 100%;
   `;
   
   const label = css`
@@ -493,17 +541,18 @@ export default function PlayerManagement() {
     font-family: Poppins, sans-serif;
     font-size: 0.875rem;
     color: #4b3b2b;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.25rem;
   `;
   
   const input = css`
     width: 100%;
-    padding: 0.75rem 1rem;
+    padding: 0.75rem;
     border-radius: 0.75rem;
     border: 1px solid #eacdca;
     font-family: Poppins, sans-serif;
     font-size: 1rem;
     outline: none;
+    box-sizing: border-box;
     
     &:focus {
       border-color: #d67b7b;
@@ -514,29 +563,51 @@ export default function PlayerManagement() {
     background-color: #d67b7b;
     color: white;
     border: none;
-    border-radius: 1.5rem;
-    padding: 0.5rem 1.25rem;
+    border-radius: 1rem;
+    padding: 0.75rem;
     font-family: Poppins, sans-serif;
-    font-size: 0.875rem;
+    font-size: 1rem;
     cursor: pointer;
-    transition: background-color 0.2s;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     
     &:hover {
       background-color: #c56c6c;
     }
   `;
   
-  // Helper function to get player name from player data (string or object)
-  const getPlayerName = (playerData) => {
-    return typeof playerData === 'object' ? playerData.name : playerData;
-  };
+  const badgeCount = css`
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #d67b7b;
+    color: white;
+    border-radius: 1rem;
+    padding: 0.125rem 0.5rem;
+    font-size: 0.75rem;
+    min-width: 1.5rem;
+    min-height: 1.5rem;
+  `;
   
-  const roomDisplayNames = {
-    'bh': 'BH Room',
-    '59': '59 Room',
-    'ashland': 'Ashland Room'
-  };
+  const emptyState = css`
+    text-align: center;
+    padding: 1rem;
+    color: #8b8b8b;
+    font-style: italic;
+    font-size: 0.875rem;
+  `;
   
+  const timestampBadge = css`
+    font-size: 0.75rem;
+    background-color: #9c27b0;
+    color: white;
+    padding: 0.125rem 0.5rem;
+    border-radius: 1rem;
+    margin-left: 0.5rem;
+  `;
+
   if (loading) {
     return (
       <div className={container}>
@@ -544,9 +615,9 @@ export default function PlayerManagement() {
           <h2 className={title}>
             <span role="img" aria-label="Players">👥</span> Player Management
           </h2>
-          <BackButton label="Back to Dashboard" />
+          <BackButton label="Back" />
         </div>
-        <div>Loading player data...</div>
+        <div style={{ textAlign: 'center', padding: '2rem' }}>Loading player data...</div>
       </div>
     );
   }
@@ -558,9 +629,9 @@ export default function PlayerManagement() {
           <h2 className={title}>
             <span role="img" aria-label="Players">👥</span> Player Management
           </h2>
-          <BackButton label="Back to Dashboard" />
+          <BackButton label="Back" />
         </div>
-        <div style={{ color: '#d67b7b' }}>{error}</div>
+        <div style={{ color: '#d67b7b', textAlign: 'center', padding: '1rem' }}>{error}</div>
       </div>
     );
   }
@@ -568,26 +639,39 @@ export default function PlayerManagement() {
   const currentRoom = rooms[selectedRoom] || { queue: [], outOfRotationPlayers: [], busyPlayers: [] };
   
   return (
-    <div className={container}>
-      <div className={header}>
-        <h2 className={title}>
-          <span role="img" aria-label="Players">👥</span> Player Management
-        </h2>
-        <BackButton label="Back to Dashboard" />
-      </div>
-      
-      {actionMessage && (
-        <div className={`${messageDisplay} ${messageType}`}>
-          {actionMessage}
+    <div style={{ 
+      padding: '1rem', 
+      backgroundColor: '#fff8f0',
+      minHeight: '100vh',
+      maxWidth: '100%',
+      boxSizing: 'border-box'
+    }}>
+      <div className={container}>
+        <div className={header}>
+          <h2 className={title}>
+            <span role="img" aria-label="Players">👥</span> Player Management
+          </h2>
+          <BackButton label="Back" />
         </div>
-      )}
-      
-      {/* Add Player Form */}
-      <div className={card}>
-        <div className={cardTitle}>Add Player to Game</div>
         
-        <form onSubmit={handleAddPlayer}>
-          <div className={formRow}>
+        {actionMessage && (
+          <div className={`${messageDisplay} ${messageType}`}>
+            {actionMessage}
+          </div>
+        )}
+        
+        {/* Add New Player Button */}
+        <button 
+          className={addPlayerButton}
+          onClick={() => setAddPlayerCollapsed(!addPlayerCollapsed)}
+        >
+          <span role="img" aria-label="Add">➕</span>
+          {addPlayerCollapsed ? 'Add New Player' : 'Hide Form'}
+        </button>
+        
+        {/* Add Player Form (Collapsible) */}
+        {!addPlayerCollapsed && (
+          <div className={form} style={{ marginBottom: '1rem' }}>
             <div className={formGroup}>
               <label className={label}>Player Name</label>
               <input
@@ -628,125 +712,203 @@ export default function PlayerManagement() {
                 <option value="appointment">On Appointment</option>
               </select>
             </div>
+            
+            <button 
+              type="button"
+              className={button}
+              onClick={handleAddPlayer}
+            >
+              Add Player
+            </button>
           </div>
-          
-          <button 
-            type="submit" 
-            className={button}
-            style={{ marginTop: '1rem' }}
-          >
-            Add Player
-          </button>
-        </form>
-      </div>
-      
-      <div className={roomTabs}>
-        {Object.keys(rooms).map(roomId => (
-          <div 
-            key={roomId} 
-            className={`${roomTab} ${selectedRoom === roomId ? 'active' : ''}`}
-            onClick={() => setSelectedRoom(roomId)}
-          >
-            {roomDisplayNames[roomId] || roomId}
+        )}
+        
+        {/* Room Tabs */}
+        <div className={roomTabs}>
+          {Object.keys(rooms).map(roomId => (
+            <div 
+              key={roomId} 
+              className={`${roomTab} ${selectedRoom === roomId ? 'active' : ''}`}
+              onClick={() => setSelectedRoom(roomId)}
+            >
+              {roomDisplayNames[roomId] || roomId}
+            </div>
+          ))}
+        </div>
+        
+        {/* Quick Stats */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          marginBottom: '1rem',
+          padding: '0.5rem',
+          backgroundColor: '#f6dfdf',
+          borderRadius: '0.75rem'
+        }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '1.25rem', fontWeight: '600' }}>
+              {currentRoom.queue?.length || 0}
+            </div>
+            <div style={{ fontSize: '0.75rem' }}>Queue</div>
           </div>
-        ))}
-      </div>
-      
-      <div>
-        <div className={sectionTitle}>
-          <span>Queue ({currentRoom.queue?.length || 0})</span>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '1.25rem', fontWeight: '600' }}>
+              {currentRoom.outOfRotationPlayers?.length || 0}
+            </div>
+            <div style={{ fontSize: '0.75rem' }}>Out</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '1.25rem', fontWeight: '600' }}>
+              {currentRoom.busyPlayers?.length || 0}
+            </div>
+            <div style={{ fontSize: '0.75rem' }}>Appt</div>
+          </div>
           <button 
             className={clearButton}
+            style={{ alignSelf: 'center' }}
             onClick={() => handleClearRoom(selectedRoom)}
           >
-            Clear All Players
+            Clear All
           </button>
         </div>
         
-        <div className={playerList}>
-          {currentRoom.queue?.length > 0 ? (
-            currentRoom.queue.map((player, index) => (
-              <div key={`queue-${player}-${index}`} className={playerItem}>
-                <div>
-                  <span style={{ fontWeight: '600', marginRight: '0.5rem' }}>#{index + 1}</span>
-                  {player}
-                </div>
-                <button 
-                  className={actionButton}
-                  onClick={() => handleRemoveFromQueue(selectedRoom, player)}
-                >
-                  Remove from Queue
-                </button>
+        {/* Queue Section (Collapsible) */}
+        <div className={collapsibleSection}>
+          <div 
+            className={sectionHeader}
+            onClick={() => setQueueCollapsed(!queueCollapsed)}
+          >
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <span>{queueCollapsed ? '▶' : '▼'}</span>
+              <span style={{ marginLeft: '0.5rem' }}>Queue</span>
+              <div className={badgeCount} style={{ marginLeft: '0.5rem' }}>
+                {currentRoom.queue?.length || 0}
               </div>
-            ))
-          ) : (
-            <div style={{ textAlign: 'center', padding: '1rem', color: '#8b8b8b', fontStyle: 'italic' }}>
-              No players in queue
+            </div>
+          </div>
+          
+          {!queueCollapsed && (
+            <div className={sectionContent}>
+              {currentRoom.queue?.length > 0 ? (
+                <div className={playerList}>
+                  {currentRoom.queue.map((player, index) => (
+                    <div key={`queue-${player}-${index}`} className={playerItem}>
+                      <div>
+                        <span style={{ 
+                          fontWeight: '600', 
+                          marginRight: '0.5rem',
+                          backgroundColor: '#d67b7b',
+                          color: 'white',
+                          padding: '0.125rem 0.5rem',
+                          borderRadius: '1rem',
+                          fontSize: '0.75rem'
+                        }}>#{index + 1}</span>
+                        {player}
+                      </div>
+                      <button 
+                        className={actionButton}
+                        onClick={() => handleRemoveFromQueue(selectedRoom, player)}
+                      >
+                        <span role="img" aria-label="Remove">❌</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className={emptyState}>
+                  No players in queue
+                </div>
+              )}
             </div>
           )}
         </div>
         
-        <div className={sectionTitle}>
-          <span>Out of Rotation ({currentRoom.outOfRotationPlayers?.length || 0})</span>
-        </div>
-        
-        <div className={playerList}>
-          {currentRoom.outOfRotationPlayers?.length > 0 ? (
-            currentRoom.outOfRotationPlayers.map((player, index) => (
-              <div key={`out-${player}-${index}`} className={playerItem}>
-                <div>{player}</div>
-                <button 
-                  className={actionButton}
-                  onClick={() => handleRemoveFromOutOfRotation(selectedRoom, player)}
-                >
-                  Remove from Out
-                </button>
+        {/* Out of Rotation Section (Collapsible) */}
+        <div className={collapsibleSection}>
+          <div 
+            className={sectionHeader}
+            onClick={() => setOutOfRotationCollapsed(!outOfRotationCollapsed)}
+          >
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <span>{outOfRotationCollapsed ? '▶' : '▼'}</span>
+              <span style={{ marginLeft: '0.5rem' }}>Out of Rotation</span>
+              <div className={badgeCount} style={{ marginLeft: '0.5rem' }}>
+                {currentRoom.outOfRotationPlayers?.length || 0}
               </div>
-            ))
-          ) : (
-            <div style={{ textAlign: 'center', padding: '1rem', color: '#8b8b8b', fontStyle: 'italic' }}>
-              No players out of rotation
+            </div>
+          </div>
+          
+          {!outOfRotationCollapsed && (
+            <div className={sectionContent}>
+              {currentRoom.outOfRotationPlayers?.length > 0 ? (
+                <div className={playerList}>
+                  {currentRoom.outOfRotationPlayers.map((player, index) => (
+                    <div key={`out-${player}-${index}`} className={playerItem}>
+                      <div>{player}</div>
+                      <button 
+                        className={actionButton}
+                        onClick={() => handleRemoveFromOutOfRotation(selectedRoom, player)}
+                      >
+                        <span role="img" aria-label="Remove">❌</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className={emptyState}>
+                  No players out of rotation
+                </div>
+              )}
             </div>
           )}
         </div>
         
-        <div className={sectionTitle}>
-          <span>On Appointment ({currentRoom.busyPlayers?.length || 0})</span>
-        </div>
-        
-        <div className={playerList}>
-          {currentRoom.busyPlayers?.length > 0 ? (
-            currentRoom.busyPlayers.map((playerData, index) => {
-              const playerName = getPlayerName(playerData);
-              const timestamp = typeof playerData === 'object' ? playerData.timestamp : null;
-              
-              return (
-                <div key={`busy-${playerName}-${index}`} className={playerItem}>
-                  <div>
-                    {playerName}
-                    {timestamp && (
-                      <span style={{ 
-                        fontSize: '0.75rem', 
-                        color: '#9c27b0', 
-                        marginLeft: '0.5rem',
-                        fontWeight: '600'
-                      }}>
-                        Since {timestamp}
-                      </span>
-                    )}
-                  </div>
-                  <button 
-                    className={actionButton}
-                    onClick={() => handleRemoveFromAppointment(selectedRoom, playerData)}
-                  >
-                    Remove from Appointment
-                  </button>
+        {/* On Appointment Section (Collapsible) */}
+        <div className={collapsibleSection}>
+          <div 
+            className={sectionHeader}
+            onClick={() => setAppointmentCollapsed(!appointmentCollapsed)}
+          >
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <span>{appointmentCollapsed ? '▶' : '▼'}</span>
+              <span style={{ marginLeft: '0.5rem' }}>On Appointment</span>
+              <div className={badgeCount} style={{ marginLeft: '0.5rem' }}>
+                {currentRoom.busyPlayers?.length || 0}
+              </div>
+            </div>
+          </div>
+          
+          {!appointmentCollapsed && (
+            <div className={sectionContent}>
+              {currentRoom.busyPlayers?.length > 0 ? (
+                <div className={playerList}>
+                  {currentRoom.busyPlayers.map((playerData, index) => {
+                    const playerName = getPlayerName(playerData);
+                    const timestamp = typeof playerData === 'object' ? playerData.timestamp : null;
+                    
+                    return (
+                      <div key={`busy-${playerName}-${index}`} className={playerItem}>
+                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+                          <span>{playerName}</span>
+                          {timestamp && (
+                            <span className={timestampBadge}>{timestamp}</span>
+                          )}
+                        </div>
+                        <button 
+                          className={actionButton}
+                          onClick={() => handleRemoveFromAppointment(selectedRoom, playerData)}
+                        >
+                          <span role="img" aria-label="Remove">❌</span>
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })
-          ) : (
-            <div style={{ textAlign: 'center', padding: '1rem', color: '#8b8b8b', fontStyle: 'italic' }}>
-              No players on appointment
+              ) : (
+                <div className={emptyState}>
+                  No players on appointment
+                </div>
+              )}
             </div>
           )}
         </div>
