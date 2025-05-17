@@ -276,6 +276,211 @@ export default function AdminControlsPanel({ roomId, roomData, onClose }) {
     }
   };
   
+  // NEW: Handle direct actions for out of rotation players
+  const handleMoveOutOfRotationToQueue = async (playerName) => {
+    try {
+      const roomRef = doc(db, 'rooms', roomId);
+      const roomData = await getDoc(roomRef);
+      
+      if (roomData.exists()) {
+        const currentData = roomData.data();
+        
+        // Remove from out of rotation and add to queue
+        await updateDoc(roomRef, {
+          outOfRotationPlayers: arrayRemove(playerName),
+          queue: arrayUnion(playerName)
+        });
+        
+        // Add history entry
+        const historyEntry = {
+          action: 'joinedQueue',
+          player: playerName,
+          timestamp: new Date().toISOString(),
+          displayTime: new Date().toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          }),
+          details: {
+            actionBy: 'Admin',
+            fromStatus: 'outOfRotation'
+          }
+        };
+        
+        await updateDoc(roomRef, {
+          history: arrayUnion(historyEntry)
+        });
+        
+        setActionMessage(`Moved ${playerName} to queue`);
+        setMessageType('success');
+        
+        setTimeout(() => {
+          setActionMessage('');
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Error moving player to queue:', error);
+      setActionMessage(`Error: ${error.message}`);
+      setMessageType('error');
+    }
+  };
+  
+  // NEW: Handle direct removal of out of rotation players
+  const handleRemoveOutOfRotationPlayer = async (playerName) => {
+    try {
+      if (window.confirm(`Are you sure you want to remove ${playerName} from the game?`)) {
+        const roomRef = doc(db, 'rooms', roomId);
+        
+        // Remove from out of rotation
+        await updateDoc(roomRef, {
+          outOfRotationPlayers: arrayRemove(playerName)
+        });
+        
+        // Add history entry
+        const historyEntry = {
+          action: 'leftGame',
+          player: playerName,
+          timestamp: new Date().toISOString(),
+          displayTime: new Date().toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          }),
+          details: {
+            actionBy: 'Admin',
+            fromStatus: 'outOfRotation'
+          }
+        };
+        
+        await updateDoc(roomRef, {
+          history: arrayUnion(historyEntry)
+        });
+        
+        setActionMessage(`Removed ${playerName} from game`);
+        setMessageType('success');
+        
+        setTimeout(() => {
+          setActionMessage('');
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Error removing player:', error);
+      setActionMessage(`Error: ${error.message}`);
+      setMessageType('error');
+    }
+  };
+  
+  // NEW: Handle direct actions for appointment players
+  const handleMoveAppointmentToQueue = async (playerData) => {
+    try {
+      const roomRef = doc(db, 'rooms', roomId);
+      const roomSnapshot = await getDoc(roomRef);
+      
+      if (roomSnapshot.exists()) {
+        const currentData = roomSnapshot.data();
+        const playerName = typeof playerData === 'object' ? playerData.name : playerData;
+        
+        // Remove from busy players (appointments)
+        await updateDoc(roomRef, {
+          busyPlayers: arrayRemove(...(currentData.busyPlayers || [])
+            .filter(item => 
+              typeof item === 'object' 
+                ? item.name.toLowerCase() === playerName.toLowerCase()
+                : item.toLowerCase() === playerName.toLowerCase()
+            )),
+          queue: arrayUnion(playerName)
+        });
+        
+        // Add history entry
+        const historyEntry = {
+          action: 'returnedFromAppointment',
+          player: playerName,
+          timestamp: new Date().toISOString(),
+          displayTime: new Date().toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          }),
+          details: {
+            actionBy: 'Admin'
+          }
+        };
+        
+        await updateDoc(roomRef, {
+          history: arrayUnion(historyEntry)
+        });
+        
+        setActionMessage(`Moved ${playerName} from appointment to queue`);
+        setMessageType('success');
+        
+        setTimeout(() => {
+          setActionMessage('');
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Error moving player from appointment to queue:', error);
+      setActionMessage(`Error: ${error.message}`);
+      setMessageType('error');
+    }
+  };
+  
+  // NEW: Handle direct removal of appointment players
+  const handleRemoveAppointmentPlayer = async (playerData) => {
+    try {
+      const playerName = typeof playerData === 'object' ? playerData.name : playerData;
+      
+      if (window.confirm(`Are you sure you want to remove ${playerName} from the game?`)) {
+        const roomRef = doc(db, 'rooms', roomId);
+        const roomSnapshot = await getDoc(roomRef);
+        
+        if (roomSnapshot.exists()) {
+          const currentData = roomSnapshot.data();
+          
+          // Remove from busy players (appointments)
+          await updateDoc(roomRef, {
+            busyPlayers: arrayRemove(...(currentData.busyPlayers || [])
+              .filter(item => 
+                typeof item === 'object' 
+                  ? item.name.toLowerCase() === playerName.toLowerCase()
+                  : item.toLowerCase() === playerName.toLowerCase()
+              ))
+          });
+          
+          // Add history entry
+          const historyEntry = {
+            action: 'leftGame',
+            player: playerName,
+            timestamp: new Date().toISOString(),
+            displayTime: new Date().toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
+            }),
+            details: {
+              actionBy: 'Admin',
+              fromStatus: 'appointment'
+            }
+          };
+          
+          await updateDoc(roomRef, {
+            history: arrayUnion(historyEntry)
+          });
+          
+          setActionMessage(`Removed ${playerName} from game`);
+          setMessageType('success');
+          
+          setTimeout(() => {
+            setActionMessage('');
+          }, 3000);
+        }
+      }
+    } catch (error) {
+      console.error('Error removing player:', error);
+      setActionMessage(`Error: ${error.message}`);
+      setMessageType('error');
+    }
+  };
+  
   // Styling
   const panel = css`
     position: fixed;
@@ -457,6 +662,38 @@ export default function AdminControlsPanel({ roomId, roomData, onClose }) {
     }
   `;
   
+  // NEW: Style for action buttons in player lists
+  const actionButtons = css`
+    display: flex;
+    gap: 0.3rem;
+  `;
+  
+  const actionButton = css`
+    background-color: #8d9e78;
+    color: white;
+    border: none;
+    border-radius: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    
+    &:hover {
+      background-color: #768a62;
+    }
+    
+    &.remove {
+      background-color: #b71c1c;
+      
+      &:hover {
+        background-color: #8e0000;
+      }
+    }
+  `;
+  
   const messageDisplay = css`
     padding: 0.75rem;
     border-radius: 0.5rem;
@@ -532,9 +769,95 @@ export default function AdminControlsPanel({ roomId, roomData, onClose }) {
         )}
       </div>
       
+      {/* Out of Rotation Management Section - UPDATED */}
+      <div className={section}>
+        <div className={sectionTitle}>Out of Rotation Management</div>
+        
+        {roomData.outOfRotationPlayers?.length > 0 ? (
+          <div className={playerList}>
+            {roomData.outOfRotationPlayers.map((player, index) => (
+              <div key={`out-${player}-${index}`} className={playerItem}>
+                <div>{player}</div>
+                <div className={actionButtons}>
+                  <button 
+                    className={actionButton}
+                    onClick={() => handleMoveOutOfRotationToQueue(player)}
+                    title="Move to Queue"
+                  >
+                    ➡️ Queue
+                  </button>
+                  <button 
+                    className={`${actionButton} remove`}
+                    onClick={() => handleRemoveOutOfRotationPlayer(player)}
+                    title="Remove from Game"
+                  >
+                    🚫
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '1rem', color: '#8b8b8b', fontStyle: 'italic' }}>
+            No players out of rotation
+          </div>
+        )}
+      </div>
+      
+      {/* Appointment Management Section - UPDATED */}
+      <div className={section}>
+        <div className={sectionTitle}>Appointment Management</div>
+        
+        {roomData.busyPlayers?.length > 0 ? (
+          <div className={playerList}>
+            {roomData.busyPlayers.map((playerData, index) => {
+              const playerName = typeof playerData === 'object' ? playerData.name : playerData;
+              const timestamp = typeof playerData === 'object' ? playerData.timestamp : null;
+              
+              return (
+                <div key={`appointment-${playerName}-${index}`} className={playerItem}>
+                  <div>
+                    {playerName}
+                    {timestamp && (
+                      <span style={{ 
+                        fontSize: '0.75rem', 
+                        color: '#9c27b0', 
+                        marginLeft: '0.5rem'
+                      }}>
+                        ({timestamp})
+                      </span>
+                    )}
+                  </div>
+                  <div className={actionButtons}>
+                    <button 
+                      className={actionButton}
+                      onClick={() => handleMoveAppointmentToQueue(playerData)}
+                      title="Move to Queue"
+                    >
+                      ➡️ Queue
+                    </button>
+                    <button 
+                      className={`${actionButton} remove`}
+                      onClick={() => handleRemoveAppointmentPlayer(playerData)}
+                      title="Remove from Game"
+                    >
+                      🚫
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '1rem', color: '#8b8b8b', fontStyle: 'italic' }}>
+            No players on appointment
+          </div>
+        )}
+      </div>
+      
       {/* Player Management Section */}
       <div className={section}>
-        <div className={sectionTitle}>Player Management</div>
+        <div className={sectionTitle}>Advanced Player Management</div>
         
         <div className={playerList}>
           {Object.entries(playersByStatus).map(([status, players]) => 
