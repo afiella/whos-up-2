@@ -9,6 +9,7 @@ import ModeratorBadge from '../ui/ModeratorBadge';
 import QueueDisplay from './QueueDisplay';
 import AdminBadge from '../ui/AdminBadge';
 import ActivityHistory from './ActivityHistory';
+import AdminControlsPanel from '../admin/AdminControlsPanel';
 
 export default function RoomPage({ roomId, roomName }) {
   const location = useLocation();
@@ -28,6 +29,9 @@ export default function RoomPage({ roomId, roomName }) {
   const [loading, setLoading] = useState(true);
   const [playerStatus, setPlayerStatus] = useState('waiting'); // 'inQueue', 'onAppointment', 'outOfRotation', 'waiting'
   const [queuePosition, setQueuePosition] = useState(-1);
+  
+  // State for admin panel
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
   
   // Function to save history to historical records collection
   const saveHistoryToArchive = async () => {
@@ -837,7 +841,7 @@ export default function RoomPage({ roomId, roomName }) {
     padding: 0.125rem 0.5rem;
     border-radius: 0.25rem;
     margin-left: 0.5rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
     
     .appointment-time {
       font-size: 0.625rem;
@@ -936,6 +940,27 @@ export default function RoomPage({ roomId, roomName }) {
     }
   `;
   
+  // Style for the admin controls button
+  const adminButton = css`
+    background-color: #a47148;
+    color: white;
+    border: none;
+    border-radius: 1rem;
+    padding: 0.5rem 1rem;
+    font-family: Poppins, sans-serif;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    margin-right: 0.5rem;
+    transition: background-color 0.2s;
+    
+    &:hover {
+      background-color: #8a5d3b;
+    }
+  `;
+  
   if (loading) {
     return (
       <div className={container}>
@@ -954,7 +979,17 @@ export default function RoomPage({ roomId, roomName }) {
             <span>Shift ends: {shiftEnd}</span>
             {moderator && <ModeratorBadge />}
           </div>
-          {/* Leave button moved to header */}
+          
+          {/* Admin Controls Button - NEW */}
+          {moderator?.isAdmin && (
+            <button
+              className={adminButton}
+              onClick={() => setShowAdminPanel(true)}
+            >
+              <span role="img" aria-label="Admin">👑</span> Admin Controls
+            </button>
+          )}
+          
           <button
             className={leaveButton}
             onClick={() => {
@@ -1108,6 +1143,19 @@ export default function RoomPage({ roomId, roomName }) {
           <span role="img" aria-label="Calendar">📅</span> Appointment
         </button>
       </div>
+      
+      {/* Admin Controls Panel - NEW */}
+      {moderator?.isAdmin && showAdminPanel && (
+        <AdminControlsPanel
+          roomId={roomId}
+          roomData={{
+            queue,
+            outOfRotationPlayers,
+            busyPlayers
+          }}
+          onClose={() => setShowAdminPanel(false)}
+        />
+      )}
     </div>
   );
 }
