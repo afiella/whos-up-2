@@ -468,6 +468,15 @@ export default function PlayerManagement() {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
   `;
   
+  // Add the missing cardTitle CSS class definition
+  const cardTitle = css`
+    font-family: Poppins, sans-serif;
+    font-weight: 600;
+    font-size: 1.25rem;
+    color: #4b3b2b;
+    margin-bottom: 1rem;
+  `;
+  
   const formRow = css`
     display: flex;
     gap: 1rem;
