@@ -33,6 +33,46 @@ export default function RoomPage({ roomId, roomName }) {
   // State for admin panel
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   
+  // Color themes for different rooms
+  const roomThemes = {
+    'bh': {
+      primary: '#FF7900', // Orange color like Claude's upvote button
+      secondary: '#FFF0E6', // Light peach/orange
+      background: '#FFF8F2', // Very light cream/peach background
+      button: '#FF9840', // Lighter orange button
+      buttonHover: '#E86F00', // Darker orange on hover
+      secondaryButton: '#6BB58E', // Complementary teal/green
+      secondaryButtonHover: '#5A9A77', // Darker teal/green on hover
+      appointmentColor: '#9C4EDD', // Purple for appointments
+      appointmentHover: '#8536C8', // Darker purple on hover
+    },
+    '59': {
+      primary: '#0A3463', // Navy blue
+      secondary: '#D6E4F0', // Light blue
+      background: '#F0F5FA', // Very light blue background
+      button: '#275D8C', // Medium blue button
+      buttonHover: '#1C4A78', // Darker blue button hover
+      secondaryButton: '#5C8BAE', // Lighter blue secondary button
+      secondaryButtonHover: '#4A7A9E', // Secondary button hover
+      appointmentColor: '#5762D5', // Blue-purple for appointments
+      appointmentHover: '#4251C4', // Darker blue-purple on hover
+    },
+    'ashland': {
+      primary: '#477547', // Forest green primary
+      secondary: '#E5F0E5', // Light green background
+      background: '#F5FAF5', // Very light green background
+      button: '#629562', // Medium green button
+      buttonHover: '#4F784F', // Darker green on hover
+      secondaryButton: '#9C7C38', // Complementary gold/tan
+      secondaryButtonHover: '#866A30', // Darker gold/tan on hover
+      appointmentColor: '#7B558C', // Purple-ish for appointments
+      appointmentHover: '#674779', // Darker purple on hover
+    }
+  };
+  
+  // Get the current room's theme, defaulting to BH theme if not found
+  const theme = roomThemes[roomId] || roomThemes['bh'];
+  
   // Function to save history to historical records collection
   const saveHistoryToArchive = async () => {
     try {
@@ -758,7 +798,7 @@ export default function RoomPage({ roomId, roomName }) {
   // Styling
   const container = css`
     min-height: 100vh;
-    background-color: #fff8f0;
+    background-color: ${theme.background};
     padding: 2rem;
     padding-bottom: 6rem; /* Add space for fixed buttons */
     box-sizing: border-box;
@@ -775,7 +815,7 @@ export default function RoomPage({ roomId, roomName }) {
   const title = css`
     font-size: clamp(1.5rem, 6vw, 2.5rem);
     font-family: 'Lilita One', cursive;
-    color: #a47148;
+    color: ${theme.primary};
   `;
   
   const infoBar = css`
@@ -793,7 +833,7 @@ export default function RoomPage({ roomId, roomName }) {
   `;
   
   const card = css`
-    background-color: #f6dfdf;
+    background-color: ${theme.secondary};
     border-radius: 1rem;
     padding: 1.5rem;
     margin-bottom: 2rem;
@@ -804,7 +844,7 @@ export default function RoomPage({ roomId, roomName }) {
     font-family: Poppins, sans-serif;
     font-weight: 600;
     font-size: 1.25rem;
-    color: #4b3b2b;
+    color: ${theme.primary};
     margin-bottom: 1rem;
   `;
   
@@ -825,7 +865,7 @@ export default function RoomPage({ roomId, roomName }) {
     
     .position {
       font-weight: 600;
-      color: #a47148;
+      color: ${theme.primary};
       margin-right: 0.5rem;
     }
   `;
@@ -834,7 +874,7 @@ export default function RoomPage({ roomId, roomName }) {
   const appointmentBanner = css`
     display: inline-flex;
     align-items: center;
-    background-color: #9c27b0; /* Bright purple color */
+    background-color: ${theme.appointmentColor}; /* Room-themed color */
     color: white;
     font-family: Poppins, sans-serif;
     font-size: 0.75rem;
@@ -858,7 +898,7 @@ export default function RoomPage({ roomId, roomName }) {
     bottom: 0;
     left: 0;
     right: 0;
-    background-color: #fff8f0;
+    background-color: ${theme.background};
     padding: 1rem;
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
     justify-content: center;
@@ -866,7 +906,7 @@ export default function RoomPage({ roomId, roomName }) {
   `;
   
   const button = css`
-    background-color: #d67b7b;
+    background-color: ${theme.button};
     color: white;
     border: none;
     border-radius: 1.5rem;
@@ -881,27 +921,27 @@ export default function RoomPage({ roomId, roomName }) {
     gap: 0.5rem;
     
     &:hover {
-      background-color: #c56c6c;
+      background-color: ${theme.buttonHover};
     }
     
     &:disabled {
-      background-color: #d3a7a7;
+      opacity: 0.7;
       cursor: not-allowed;
     }
     
     &.secondary {
-      background-color: #8d9e78;
+      background-color: ${theme.secondaryButton};
       
       &:hover {
-        background-color: #768a62;
+        background-color: ${theme.secondaryButtonHover};
       }
     }
     
     &.tertiary {
-      background-color: #a47148;
+      background-color: ${theme.primary};
       
       &:hover {
-        background-color: #8a5d3b;
+        background-color: ${theme.buttonHover};
       }
     }
 
@@ -914,10 +954,10 @@ export default function RoomPage({ roomId, roomName }) {
     }
     
     &.appointment {
-      background-color: #9c27b0; /* Bright purple color */
+      background-color: ${theme.appointmentColor};
       
       &:hover {
-        background-color: #7b1fa2;
+        background-color: ${theme.appointmentHover};
       }
     }
   `;
@@ -942,7 +982,7 @@ export default function RoomPage({ roomId, roomName }) {
   
   // Style for the admin controls button
   const adminButton = css`
-    background-color: #a47148;
+    background-color: ${theme.primary};
     color: white;
     border: none;
     border-radius: 1rem;
@@ -957,7 +997,7 @@ export default function RoomPage({ roomId, roomName }) {
     transition: background-color 0.2s;
     
     &:hover {
-      background-color: #8a5d3b;
+      background-color: ${theme.buttonHover};
     }
   `;
   
