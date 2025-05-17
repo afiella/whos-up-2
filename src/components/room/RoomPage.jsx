@@ -239,23 +239,38 @@ export default function RoomPage({ roomId, roomName }) {
         const appointmentData = data.busyPlayers || [];
         setBusyPlayers(appointmentData);
         
-        // Check player's position in queue and their status
-        if (newQueue.includes(playerName)) {
-          const newPosition = newQueue.indexOf(playerName);
+        // Check player's position in queue and status (CASE INSENSITIVE)
+        // Check if player is in queue (case insensitive)
+        const queueIndex = newQueue.findIndex(
+          name => name.toLowerCase() === playerName.toLowerCase()
+        );
+        
+        if (queueIndex !== -1) {
           setPlayerStatus('inQueue');
-          setQueuePosition(newPosition);
+          setQueuePosition(queueIndex);
           
           // Notify if player is now first in queue
-          if (newPosition === 0 && oldPosition > 0) {
+          if (queueIndex === 0 && oldPosition > 0) {
             console.log("User is now first in queue");
           }
-        } else if (appointmentData.some(item => typeof item === 'object' ? item.name === playerName : item === playerName)) {
+        } 
+        // Check if player is on appointment (case insensitive)
+        else if (appointmentData.some(item => 
+          typeof item === 'object' 
+            ? item.name.toLowerCase() === playerName.toLowerCase() 
+            : item.toLowerCase() === playerName.toLowerCase()
+        )) {
           setPlayerStatus('onAppointment');
           setQueuePosition(-1);
-        } else if (data.outOfRotationPlayers?.includes(playerName)) {
+        } 
+        // Check if player is out of rotation (case insensitive)
+        else if (data.outOfRotationPlayers?.some(
+          name => name.toLowerCase() === playerName.toLowerCase()
+        )) {
           setPlayerStatus('outOfRotation');
           setQueuePosition(-1);
-        } else {
+        } 
+        else {
           setPlayerStatus('waiting');
           setQueuePosition(-1);
         }
@@ -302,18 +317,28 @@ export default function RoomPage({ roomId, roomName }) {
   const handleJoinQueue = async () => {
     const roomRef = doc(db, 'rooms', roomId);
     
-    // Determine if player is coming back from appointment
+    // Determine if player is coming back from appointment (case insensitive)
     const wasOnAppointment = busyPlayers.some(item => 
-      typeof item === 'object' ? item.name === playerName : item === playerName
+      typeof item === 'object' 
+        ? item.name.toLowerCase() === playerName.toLowerCase() 
+        : item.toLowerCase() === playerName.toLowerCase()
     );
     
     // Update status in Firestore
+    const roomData = await getDoc(roomRef);
+    const currentData = roomData.data();
+    
+    // Case insensitive check for removing
     await updateDoc(roomRef, {
       queue: arrayUnion(playerName),
-      outOfRotationPlayers: arrayRemove(playerName),
-      busyPlayers: arrayRemove(...busyPlayers.filter(item => 
-        typeof item === 'object' ? item.name === playerName : item === playerName
-      ))
+      outOfRotationPlayers: arrayRemove(...(currentData.outOfRotationPlayers || [])
+        .filter(name => name.toLowerCase() === playerName.toLowerCase())),
+      busyPlayers: arrayRemove(...(currentData.busyPlayers || [])
+        .filter(item => 
+          typeof item === 'object' 
+            ? item.name.toLowerCase() === playerName.toLowerCase() 
+            : item.toLowerCase() === playerName.toLowerCase()
+        ))
     });
     
     // Add appropriate history entry
@@ -328,13 +353,20 @@ export default function RoomPage({ roomId, roomName }) {
   const handleOutOfRotation = async () => {
     const roomRef = doc(db, 'rooms', roomId);
     
-    // Update status in Firestore
+    // Update status in Firestore - case insensitive
+    const roomData = await getDoc(roomRef);
+    const currentData = roomData.data();
+    
     await updateDoc(roomRef, {
       outOfRotationPlayers: arrayUnion(playerName),
-      queue: arrayRemove(playerName),
-      busyPlayers: arrayRemove(...busyPlayers.filter(item => 
-        typeof item === 'object' ? item.name === playerName : item === playerName
-      ))
+      queue: arrayRemove(...(currentData.queue || [])
+        .filter(name => name.toLowerCase() === playerName.toLowerCase())),
+      busyPlayers: arrayRemove(...(currentData.busyPlayers || [])
+        .filter(item => 
+          typeof item === 'object' 
+            ? item.name.toLowerCase() === playerName.toLowerCase() 
+            : item.toLowerCase() === playerName.toLowerCase()
+        ))
     });
     
     // Add history entry
@@ -359,17 +391,17 @@ export default function RoomPage({ roomId, roomName }) {
       timestamp: timestamp
     };
     
-    // First remove any existing appointment for this player (if upgrading from string to object format)
-    const currentBusyPlayers = (await getDoc(roomRef)).data()?.busyPlayers || [];
-    const updatedBusyPlayers = currentBusyPlayers.filter(item => 
-      typeof item === 'object' ? item.name !== playerName : item !== playerName
-    );
+    // First remove any existing appointment for this player (case insensitive)
+    const roomData = await getDoc(roomRef);
+    const currentData = roomData.data();
     
-    // Remove from queue and outOfRotation if present, then add the new appointment data
+    // Update status in Firestore - case insensitive
     await updateDoc(roomRef, {
-      busyPlayers: [...updatedBusyPlayers, appointmentData],
-      queue: arrayRemove(playerName),
-      outOfRotationPlayers: arrayRemove(playerName)
+      busyPlayers: arrayUnion(appointmentData),
+      queue: arrayRemove(...(currentData.queue || [])
+        .filter(name => name.toLowerCase() === playerName.toLowerCase())),
+      outOfRotationPlayers: arrayRemove(...(currentData.outOfRotationPlayers || [])
+        .filter(name => name.toLowerCase() === playerName.toLowerCase()))
     });
     
     // Add history entry with timestamp details
@@ -384,12 +416,19 @@ export default function RoomPage({ roomId, roomName }) {
     if (roomData.exists()) {
       const currentQueue = roomData.data().queue || [];
       
-      // Only proceed if player is in queue
-      if (currentQueue.includes(playerName)) {
+      // Only proceed if player is in queue (case insensitive)
+      const playerIndex = currentQueue.findIndex(
+        name => name.toLowerCase() === playerName.toLowerCase()
+      );
+      
+      if (playerIndex !== -1) {
         // Remove player from current position
-        const newQueue = currentQueue.filter(name => name !== playerName);
-        // Add player to the end of queue
-        newQueue.push(playerName);
+        const newQueue = currentQueue.filter(name => 
+          name.toLowerCase() !== playerName.toLowerCase()
+        );
+        
+        // Add player to the end of queue - use the actual player name from queue to preserve case
+        newQueue.push(currentQueue[playerIndex]);
         
         // Update queue in Firestore
         await updateDoc(roomRef, {
@@ -405,14 +444,21 @@ export default function RoomPage({ roomId, roomName }) {
   // Handle leaving the game completely
   const handleLeaveGame = async () => {
     const roomRef = doc(db, 'rooms', roomId);
+    const roomData = await getDoc(roomRef);
+    const currentData = roomData.data();
     
-    // Update Firestore to remove player from all arrays
+    // Update Firestore to remove player from all arrays (case insensitive)
     await updateDoc(roomRef, {
-      queue: arrayRemove(playerName),
-      outOfRotationPlayers: arrayRemove(playerName),
-      busyPlayers: arrayRemove(...busyPlayers.filter(item => 
-        typeof item === 'object' ? item.name === playerName : item === playerName
-      ))
+      queue: arrayRemove(...(currentData.queue || [])
+        .filter(name => name.toLowerCase() === playerName.toLowerCase())),
+      outOfRotationPlayers: arrayRemove(...(currentData.outOfRotationPlayers || [])
+        .filter(name => name.toLowerCase() === playerName.toLowerCase())),
+      busyPlayers: arrayRemove(...(currentData.busyPlayers || [])
+        .filter(item => 
+          typeof item === 'object' 
+            ? item.name.toLowerCase() === playerName.toLowerCase() 
+            : item.toLowerCase() === playerName.toLowerCase()
+        ))
     });
     
     // Add history entry
@@ -526,7 +572,7 @@ export default function RoomPage({ roomId, roomName }) {
     URL.revokeObjectURL(url);
   };
 
-  // NEW FUNCTION: Move a player to appointment status (for moderator use)
+  // Move a player to appointment status (for moderator use)
   const handleMoveToAppointment = async (playerName) => {
     try {
       const roomRef = doc(db, 'rooms', roomId);
@@ -545,56 +591,66 @@ export default function RoomPage({ roomId, roomName }) {
         timestamp: timestamp
       };
       
-      // First remove any existing appointment for this player
-      const currentBusyPlayers = (await getDoc(roomRef)).data()?.busyPlayers || [];
-      const updatedBusyPlayers = currentBusyPlayers.filter(item => 
-        typeof item === 'object' ? item.name !== playerName : item !== playerName
-      );
+      // First get current data to handle case-insensitive operations
+      const roomData = await getDoc(roomRef);
+      const currentData = roomData.data();
       
-      // Remove from queue and outOfRotation if present, then add the new appointment data
+      // Update status in Firestore - case insensitive
       await updateDoc(roomRef, {
-        busyPlayers: [...updatedBusyPlayers, appointmentData],
-        queue: arrayRemove(playerName),
-        outOfRotationPlayers: arrayRemove(playerName)
+        busyPlayers: arrayUnion(appointmentData),
+        queue: arrayRemove(...(currentData.queue || [])
+          .filter(name => name.toLowerCase() === playerName.toLowerCase())),
+        outOfRotationPlayers: arrayRemove(...(currentData.outOfRotationPlayers || [])
+          .filter(name => name.toLowerCase() === playerName.toLowerCase()))
       });
       
       // Add history entry with timestamp details and moderator action
       addHistoryEntry('wentOnAppointment', playerName, { 
         timestamp,
-        actionBy: moderator?.displayName || playerName // Fixed: using playerName instead of currentPlayer
+        actionBy: moderator?.displayName || playerName
       });
     } catch (error) {
       console.error('Error moving player to appointment:', error);
     }
   };
 
-  // NEW FUNCTION: Move a player to queue (for moderator use)
+  // Move a player to queue (for moderator use)
   const handleMoveToQueue = async (playerName) => {
     try {
       const roomRef = doc(db, 'rooms', roomId);
       
-      // Determine if player is coming back from appointment
+      // Determine if player is coming back from appointment (case insensitive)
       const wasOnAppointment = busyPlayers.some(item => 
-        typeof item === 'object' ? item.name === playerName : item === playerName
+        typeof item === 'object' 
+          ? item.name.toLowerCase() === playerName.toLowerCase() 
+          : item.toLowerCase() === playerName.toLowerCase()
       );
       
-      // Update status in Firestore
+      // Get current data for case-insensitive operations
+      const roomData = await getDoc(roomRef);
+      const currentData = roomData.data();
+      
+      // Update status in Firestore - case insensitive
       await updateDoc(roomRef, {
         queue: arrayUnion(playerName),
-        outOfRotationPlayers: arrayRemove(playerName),
-        busyPlayers: arrayRemove(...busyPlayers.filter(item => 
-          typeof item === 'object' ? item.name === playerName : item === playerName
-        ))
+        outOfRotationPlayers: arrayRemove(...(currentData.outOfRotationPlayers || [])
+          .filter(name => name.toLowerCase() === playerName.toLowerCase())),
+        busyPlayers: arrayRemove(...(currentData.busyPlayers || [])
+          .filter(item => 
+            typeof item === 'object' 
+              ? item.name.toLowerCase() === playerName.toLowerCase() 
+              : item.toLowerCase() === playerName.toLowerCase()
+          ))
       });
       
       // Add appropriate history entry
       if (wasOnAppointment) {
         addHistoryEntry('returnedFromAppointment', playerName, {
-          actionBy: moderator?.displayName || playerName // Fixed: using playerName instead of currentPlayer
+          actionBy: moderator?.displayName || playerName
         });
       } else {
         addHistoryEntry('joinedQueue', playerName, {
-          actionBy: moderator?.displayName || playerName // Fixed: using playerName instead of currentPlayer
+          actionBy: moderator?.displayName || playerName
         });
       }
     } catch (error) {
@@ -602,47 +658,64 @@ export default function RoomPage({ roomId, roomName }) {
     }
   };
 
-  // NEW FUNCTION: Move a player to out of rotation (for moderator use)
+  // Move a player to out of rotation (for moderator use)
   const handleMoveToOutOfRotation = async (playerName) => {
     try {
       const roomRef = doc(db, 'rooms', roomId);
       
-      // Update status in Firestore
+      // Get current data for case-insensitive operations
+      const roomData = await getDoc(roomRef);
+      const currentData = roomData.data();
+      
+      // Update status in Firestore - case insensitive
       await updateDoc(roomRef, {
         outOfRotationPlayers: arrayUnion(playerName),
-        queue: arrayRemove(playerName),
-        busyPlayers: arrayRemove(...busyPlayers.filter(item => 
-          typeof item === 'object' ? item.name === playerName : item === playerName
-        ))
+        queue: arrayRemove(...(currentData.queue || [])
+          .filter(name => name.toLowerCase() === playerName.toLowerCase())),
+        busyPlayers: arrayRemove(...(currentData.busyPlayers || [])
+          .filter(item => 
+            typeof item === 'object' 
+              ? item.name.toLowerCase() === playerName.toLowerCase() 
+              : item.toLowerCase() === playerName.toLowerCase()
+          ))
       });
       
       // Add history entry
       addHistoryEntry('wentOutOfRotation', playerName, {
-        actionBy: moderator?.displayName || playerName // Fixed: using playerName instead of currentPlayer
+        actionBy: moderator?.displayName || playerName
       });
     } catch (error) {
       console.error('Error moving player to out of rotation:', error);
     }
   };
 
-  // NEW FUNCTION: Remove a player from the game completely (for moderator use)
+  // Remove a player from the game completely (for moderator use)
   const handleRemovePlayer = async (playerName) => {
     try {
       if (window.confirm(`Are you sure you want to remove ${playerName} from the game?`)) {
         const roomRef = doc(db, 'rooms', roomId);
         
-        // Update Firestore to remove player from all arrays
+        // Get current data for case-insensitive operations
+        const roomData = await getDoc(roomRef);
+        const currentData = roomData.data();
+        
+        // Update Firestore to remove player from all arrays - case insensitive
         await updateDoc(roomRef, {
-          queue: arrayRemove(playerName),
-          outOfRotationPlayers: arrayRemove(playerName),
-          busyPlayers: arrayRemove(...busyPlayers.filter(item => 
-            typeof item === 'object' ? item.name === playerName : item === playerName
-          ))
+          queue: arrayRemove(...(currentData.queue || [])
+            .filter(name => name.toLowerCase() === playerName.toLowerCase())),
+          outOfRotationPlayers: arrayRemove(...(currentData.outOfRotationPlayers || [])
+            .filter(name => name.toLowerCase() === playerName.toLowerCase())),
+          busyPlayers: arrayRemove(...(currentData.busyPlayers || [])
+            .filter(item => 
+              typeof item === 'object' 
+                ? item.name.toLowerCase() === playerName.toLowerCase() 
+                : item.toLowerCase() === playerName.toLowerCase()
+            ))
         });
         
         // Add history entry
         addHistoryEntry('leftGame', playerName, {
-          actionBy: moderator?.displayName || playerName // Fixed: using playerName instead of currentPlayer
+          actionBy: moderator?.displayName || playerName
         });
       }
     } catch (error) {
@@ -652,22 +725,28 @@ export default function RoomPage({ roomId, roomName }) {
 
   // Helper functions to identify admins and moderators
   const isAdmin = (name) => {
-    return moderator?.isAdmin && name === moderator.displayName;
+    return moderator?.isAdmin && name.toLowerCase() === moderator.displayName.toLowerCase();
   };
   
   const isModerator = (name) => {
-    return moderator && !moderator.isAdmin && name === moderator.displayName;
+    return moderator && !moderator.isAdmin && name.toLowerCase() === moderator.displayName.toLowerCase();
   };
 
   // Helper function to check if a player is on appointment
   const isOnAppointment = (name) => {
-    return busyPlayers.some(item => typeof item === 'object' ? item.name === name : item === name);
+    return busyPlayers.some(item => 
+      typeof item === 'object' 
+        ? item.name.toLowerCase() === name.toLowerCase() 
+        : item.toLowerCase() === name.toLowerCase()
+    );
   };
   
   // Helper function to get appointment timestamp for a player
   const getAppointmentTime = (name) => {
     const appointmentItem = busyPlayers.find(item => 
-      typeof item === 'object' ? item.name === name : item === name
+      typeof item === 'object' 
+        ? item.name.toLowerCase() === name.toLowerCase() 
+        : item.toLowerCase() === name.toLowerCase()
     );
     return appointmentItem && typeof appointmentItem === 'object' ? appointmentItem.timestamp : null;
   };
@@ -916,7 +995,7 @@ export default function RoomPage({ roomId, roomName }) {
               <div key={player} className={playerItem}>
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                   {player}
-                  {player === playerName && ' (You)'}
+                  {player.toLowerCase() === playerName.toLowerCase() && ' (You)'}
                   {isAdmin(player) && <AdminBadge />}
                   {isModerator(player) && <ModeratorBadge />}
                   {isOnAppointment(player) && (
@@ -942,16 +1021,16 @@ export default function RoomPage({ roomId, roomName }) {
         {busyPlayers.length > 0 ? (
           <div className={playerList}>
             {busyPlayers.map((playerData) => {
-              const playerName = typeof playerData === 'object' ? playerData.name : playerData;
+              const playersName = typeof playerData === 'object' ? playerData.name : playerData;
               const timestamp = typeof playerData === 'object' ? playerData.timestamp : null;
               
               return (
-                <div key={playerName} className={playerItem}>
+                <div key={playersName} className={playerItem}>
                   <div style={{ display: 'flex', alignItems: 'center' }}>
-                    {playerName}
-                    {playerName === playerName && ' (You)'}
-                    {isAdmin(playerName) && <AdminBadge />}
-                    {isModerator(playerName) && <ModeratorBadge />}
+                    {playersName}
+                    {playersName.toLowerCase() === playerName.toLowerCase() && ' (You)'}
+                    {isAdmin(playersName) && <AdminBadge />}
+                    {isModerator(playersName) && <ModeratorBadge />}
                     <div className={appointmentBanner}>
                       ON APPOINTMENT
                       <span className="appointment-time">

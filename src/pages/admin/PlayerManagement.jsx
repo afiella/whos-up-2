@@ -2,20 +2,25 @@
 import React, { useState, useEffect } from 'react';
 import { css } from '@emotion/css';
 import { db } from '../../firebase/config';
-import { doc, onSnapshot, updateDoc, arrayRemove, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc, arrayRemove, getDoc, arrayUnion } from 'firebase/firestore';
 import BackButton from '../../components/ui/BackButton';
 
 export default function PlayerManagement() {
   const [rooms, setRooms] = useState({
     bh: { queue: [], outOfRotationPlayers: [], busyPlayers: [] },
-    '59': { queue: [], outOfRotationPlayers: [], busyPlayers: [] },
-    ashland: { queue: [], outOfRotationPlayers: [], busyPlayers: [] }
+    '59': { queue: [], busyPlayers: [], outOfRotationPlayers: [] },
+    ashland: { queue: [], busyPlayers: [], outOfRotationPlayers: [] }
   });
   const [selectedRoom, setSelectedRoom] = useState('bh');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [actionMessage, setActionMessage] = useState('');
   const [messageType, setMessageType] = useState('');
+  
+  // New states for adding players
+  const [newPlayerName, setNewPlayerName] = useState('');
+  const [newPlayerRoom, setNewPlayerRoom] = useState('');
+  const [newPlayerStatus, setNewPlayerStatus] = useState('queue');
   
   // Fetch room data
   useEffect(() => {
@@ -183,6 +188,151 @@ export default function PlayerManagement() {
     }
   };
   
+  // New function to add a player to a room
+  const handleAddPlayer = async (e) => {
+    e.preventDefault();
+    
+    if (!newPlayerName || !newPlayerRoom || !newPlayerStatus) {
+      setActionMessage('Please fill all fields');
+      setMessageType('error');
+      return;
+    }
+    
+    try {
+      const roomRef = doc(db, 'rooms', newPlayerRoom);
+      const roomData = await getDoc(roomRef);
+      
+      if (!roomData.exists()) {
+        setActionMessage(`Room ${newPlayerRoom} does not exist`);
+        setMessageType('error');
+        return;
+      }
+      
+      // Get current room data
+      const currentData = roomData.data();
+      
+      // Handle different statuses
+      switch (newPlayerStatus) {
+        case 'queue':
+          // Check if player is already in queue (case insensitive)
+          if (currentData.queue?.some(name => name.toLowerCase() === newPlayerName.toLowerCase())) {
+            setActionMessage(`${newPlayerName} is already in the queue`);
+            setMessageType('error');
+            return;
+          }
+          
+          // Add to queue and remove from other arrays
+          await updateDoc(roomRef, {
+            queue: arrayUnion(newPlayerName),
+            outOfRotationPlayers: arrayRemove(...(currentData.outOfRotationPlayers || [])
+              .filter(name => name.toLowerCase() === newPlayerName.toLowerCase())),
+            busyPlayers: arrayRemove(...(currentData.busyPlayers || [])
+              .filter(item => 
+                typeof item === 'object' 
+                  ? item.name.toLowerCase() === newPlayerName.toLowerCase() 
+                  : item.toLowerCase() === newPlayerName.toLowerCase()
+              ))
+          });
+          break;
+          
+        case 'outOfRotation':
+          // Check if player is already out of rotation (case insensitive)
+          if (currentData.outOfRotationPlayers?.some(name => name.toLowerCase() === newPlayerName.toLowerCase())) {
+            setActionMessage(`${newPlayerName} is already out of rotation`);
+            setMessageType('error');
+            return;
+          }
+          
+          // Add to out of rotation and remove from other arrays
+          await updateDoc(roomRef, {
+            outOfRotationPlayers: arrayUnion(newPlayerName),
+            queue: arrayRemove(...(currentData.queue || [])
+              .filter(name => name.toLowerCase() === newPlayerName.toLowerCase())),
+            busyPlayers: arrayRemove(...(currentData.busyPlayers || [])
+              .filter(item => 
+                typeof item === 'object' 
+                  ? item.name.toLowerCase() === newPlayerName.toLowerCase() 
+                  : item.toLowerCase() === newPlayerName.toLowerCase()
+              ))
+          });
+          break;
+          
+        case 'appointment':
+          // Check if player is already on appointment (case insensitive)
+          if (currentData.busyPlayers?.some(item => 
+            typeof item === 'object' 
+              ? item.name.toLowerCase() === newPlayerName.toLowerCase() 
+              : item.toLowerCase() === newPlayerName.toLowerCase()
+          )) {
+            setActionMessage(`${newPlayerName} is already on appointment`);
+            setMessageType('error');
+            return;
+          }
+          
+          // Get current timestamp
+          const now = new Date();
+          const timestamp = now.toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit', 
+            hour12: true 
+          });
+          
+          // Create appointment object
+          const appointmentData = {
+            name: newPlayerName,
+            timestamp: timestamp
+          };
+          
+          // Add to appointment and remove from other arrays
+          await updateDoc(roomRef, {
+            busyPlayers: arrayUnion(appointmentData),
+            queue: arrayRemove(...(currentData.queue || [])
+              .filter(name => name.toLowerCase() === newPlayerName.toLowerCase())),
+            outOfRotationPlayers: arrayRemove(...(currentData.outOfRotationPlayers || [])
+              .filter(name => name.toLowerCase() === newPlayerName.toLowerCase()))
+          });
+          break;
+          
+        default:
+          setActionMessage('Invalid status');
+          setMessageType('error');
+          return;
+      }
+      
+      // Add activity log
+      const historyEntry = {
+        action: newPlayerStatus === 'queue' ? 'joinedQueue' : 
+                newPlayerStatus === 'outOfRotation' ? 'wentOutOfRotation' : 'wentOnAppointment',
+        player: newPlayerName,
+        timestamp: new Date().toISOString(),
+        displayTime: new Date().toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        }),
+        details: {
+          actionBy: 'Admin',
+          manuallyAdded: true
+        }
+      };
+      
+      await updateDoc(roomRef, {
+        history: arrayUnion(historyEntry)
+      });
+      
+      setActionMessage(`Added ${newPlayerName} to ${newPlayerRoom} as ${newPlayerStatus}`);
+      setMessageType('success');
+      
+      // Clear form
+      setNewPlayerName('');
+      
+    } catch (error) {
+      console.error('Error adding player:', error);
+      setActionMessage(`Error: ${error.message}`);
+      setMessageType('error');
+    }
+  };
+
   // Styling
   const container = css`
     background-color: white;
@@ -310,6 +460,63 @@ export default function PlayerManagement() {
     }
   `;
   
+  const card = css`
+    background-color: #f6dfdf;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  `;
+  
+  const formRow = css`
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+  `;
+  
+  const formGroup = css`
+    flex: 1;
+    min-width: 200px;
+  `;
+  
+  const label = css`
+    display: block;
+    font-family: Poppins, sans-serif;
+    font-size: 0.875rem;
+    color: #4b3b2b;
+    margin-bottom: 0.5rem;
+  `;
+  
+  const input = css`
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid #eacdca;
+    font-family: Poppins, sans-serif;
+    font-size: 1rem;
+    outline: none;
+    
+    &:focus {
+      border-color: #d67b7b;
+    }
+  `;
+  
+  const button = css`
+    background-color: #d67b7b;
+    color: white;
+    border: none;
+    border-radius: 1.5rem;
+    padding: 0.5rem 1.25rem;
+    font-family: Poppins, sans-serif;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    
+    &:hover {
+      background-color: #c56c6c;
+    }
+  `;
+  
   // Helper function to get player name from player data (string or object)
   const getPlayerName = (playerData) => {
     return typeof playerData === 'object' ? playerData.name : playerData;
@@ -365,6 +572,64 @@ export default function PlayerManagement() {
           {actionMessage}
         </div>
       )}
+      
+      {/* Add Player Form */}
+      <div className={card}>
+        <div className={cardTitle}>Add Player to Game</div>
+        
+        <form onSubmit={handleAddPlayer}>
+          <div className={formRow}>
+            <div className={formGroup}>
+              <label className={label}>Player Name</label>
+              <input
+                type="text"
+                className={input}
+                value={newPlayerName}
+                onChange={(e) => setNewPlayerName(e.target.value)}
+                placeholder="Enter player name"
+                required
+              />
+            </div>
+            
+            <div className={formGroup}>
+              <label className={label}>Room</label>
+              <select
+                className={input}
+                value={newPlayerRoom}
+                onChange={(e) => setNewPlayerRoom(e.target.value)}
+                required
+              >
+                <option value="">Select a room</option>
+                <option value="bh">BH Room</option>
+                <option value="59">59 Room</option>
+                <option value="ashland">Ashland Room</option>
+              </select>
+            </div>
+            
+            <div className={formGroup}>
+              <label className={label}>Status</label>
+              <select
+                className={input}
+                value={newPlayerStatus}
+                onChange={(e) => setNewPlayerStatus(e.target.value)}
+                required
+              >
+                <option value="queue">In Queue</option>
+                <option value="outOfRotation">Out of Rotation</option>
+                <option value="appointment">On Appointment</option>
+              </select>
+            </div>
+          </div>
+          
+          <button 
+            type="submit" 
+            className={button}
+            style={{ marginTop: '1rem' }}
+          >
+            Add Player
+          </button>
+        </form>
+      </div>
       
       <div className={roomTabs}>
         {Object.keys(rooms).map(roomId => (
