@@ -1020,14 +1020,24 @@ export default function RoomPage({ roomId, roomName }) {
             {moderator && <ModeratorBadge />}
           </div>
           
-          {/* Admin Controls Button - NEW */}
+          {/* Admin Controls and Dashboard Buttons - NEW */}
           {moderator?.isAdmin && (
-            <button
-              className={adminButton}
-              onClick={() => setShowAdminPanel(true)}
-            >
-              <span role="img" aria-label="Admin">👑</span> Admin Controls
-            </button>
+            <>
+              <button
+                className={adminButton}
+                onClick={() => setShowAdminPanel(true)}
+              >
+                <span role="img" aria-label="Admin">👑</span> Admin Controls
+              </button>
+              
+              <button
+                className={adminButton}
+                style={{ backgroundColor: '#0a3463' }} // Dark blue for contrast
+                onClick={() => navigate('/admin-dashboard')}
+              >
+                <span role="img" aria-label="Dashboard">📊</span> Dashboard
+              </button>
+            </>
           )}
           
           <button
