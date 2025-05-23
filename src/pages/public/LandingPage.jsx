@@ -1,11 +1,16 @@
 // src/pages/public/LandingPage.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { css } from '@emotion/css';
+import { useAuth } from '../../context/AuthContext';
+import { db } from '../../firebase/config';
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function LandingPage() {
   const [name, setName] = useState('');
+  const [checkingManualEntry, setCheckingManualEntry] = useState(false);
   const nav = useNavigate();
+  const { moderator } = useAuth();
   
   // flex container
   const container = css`
@@ -95,10 +100,56 @@ export default function LandingPage() {
     }
   `;
 
+  const loadingText = css`
+    color: #a47148;
+    font-family: Poppins, sans-serif;
+    font-size: 0.875rem;
+    font-style: italic;
+  `;
+
+  // Check if player was manually added
+  const checkManuallyAddedPlayer = async (playerName) => {
+    try {
+      setCheckingManualEntry(true);
+      const manualPlayersRef = doc(db, 'manuallyAddedPlayers', 'players');
+      const manualPlayersDoc = await getDoc(manualPlayersRef);
+      
+      if (manualPlayersDoc.exists()) {
+        const players = manualPlayersDoc.data();
+        const playerEntry = players[playerName.toLowerCase()];
+        
+        if (playerEntry) {
+          // Player was manually added, navigate directly to their room
+          nav(`/${playerEntry.room}`, { 
+            state: { 
+              name: playerEntry.name,
+              shiftEnd: playerEntry.shiftEnd,
+              shiftType: playerEntry.shiftType,
+              wasManuallyAdded: true
+            } 
+          });
+          return true;
+        }
+      }
+      return false;
+    } catch (error) {
+      console.error('Error checking manually added players:', error);
+      return false;
+    } finally {
+      setCheckingManualEntry(false);
+    }
+  };
+
   // Submit on Enter
-  const handleKeyDown = e => {
+  const handleKeyDown = async (e) => {
     if (e.key === 'Enter' && name.trim()) {
-      nav('/select', { state: { name } });
+      // First check if this player was manually added
+      const wasManuallyAdded = await checkManuallyAddedPlayer(name.trim());
+      
+      // If not manually added, proceed to room selection
+      if (!wasManuallyAdded) {
+        nav('/select', { state: { name: name.trim() } });
+      }
     }
   };
 
@@ -116,18 +167,36 @@ export default function LandingPage() {
             onChange={e => setName(e.target.value)}
             onKeyDown={handleKeyDown}
             className={input}
+            disabled={checkingManualEntry}
           />
         </div>
         
-        {/* Two distinct access links */}
-        <div className={accessLinks}>
-          <div className={accessLink} onClick={() => nav('/mod-login')}>
-            Moderator Access
+        {checkingManualEntry && (
+          <div className={loadingText}>Checking entry...</div>
+        )}
+        
+        {/* Dashboard link if already logged in as moderator */}
+        {moderator && (
+          <div
+            className={accessLink}
+            onClick={() => nav('/mod-dashboard')}
+            style={{ marginTop: '0.5rem' }}
+          >
+            Go to Moderator Dashboard
           </div>
-          <div className={accessLink} onClick={() => nav('/admin-login')}>
-            Admin Access
+        )}
+        
+        {/* Access links for admin/moderator */}
+        {!moderator && (
+          <div className={accessLinks}>
+            <div className={accessLink} onClick={() => nav('/mod-login')}>
+              Moderator Access
+            </div>
+            <div className={accessLink} onClick={() => nav('/admin-login')}>
+              Admin Access
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
