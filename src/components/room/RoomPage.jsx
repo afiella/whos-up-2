@@ -33,6 +33,13 @@ export default function RoomPage({ roomId, roomName }) {
   // State for admin panel
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   
+  // State for ghost player modal
+  const [showGhostPlayerModal, setShowGhostPlayerModal] = useState(false);
+  const [ghostPlayerName, setGhostPlayerName] = useState('');
+  const [ghostPlayerShift, setGhostPlayerShift] = useState('');
+  const [ghostPlayerMessage, setGhostPlayerMessage] = useState('');
+  const [ghostPlayerMessageType, setGhostPlayerMessageType] = useState('');
+  
   // Color themes for different rooms
   const roomThemes = {
     'bh': {
@@ -72,6 +79,128 @@ export default function RoomPage({ roomId, roomName }) {
   
   // Get the current room's theme, defaulting to BH theme if not found
   const theme = roomThemes[roomId] || roomThemes['bh'];
+  
+  // Define shifts based on room and day
+  const getShiftsForRoom = () => {
+    const today = new Date().getDay(); // 0 is Sunday
+    const isSunday = today === 0;
+    
+    const shifts = {
+      '59': isSunday ? [
+        { value: 'sunday', label: 'Sunday (11:30 AM - 6:00 PM)', endTime: '6:00 PM' }
+      ] : [
+        { value: 'double', label: 'Double (9:30 AM - 8:00 PM)', endTime: '8:00 PM' },
+        { value: 'opening', label: 'Opening (9:30 AM - 3:00 PM)', endTime: '3:00 PM' },
+        { value: 'close', label: 'Close (3:00 PM - 8:00 PM)', endTime: '8:00 PM' }
+      ],
+      'bh': isSunday ? [
+        { value: 'sunday', label: 'Sunday (11:30 AM - 6:00 PM)', endTime: '6:00 PM' }
+      ] : [
+        { value: 'double', label: 'Double (8:30 AM - 8:00 PM)', endTime: '8:00 PM' },
+        { value: 'opening', label: 'Opening (8:30 AM - 3:00 PM)', endTime: '3:00 PM' },
+        { value: 'close', label: 'Close (3:00 PM - 8:00 PM)', endTime: '8:00 PM' },
+        { value: 'afternoon', label: 'Afternoon (8:30 AM - 5:00 PM)', endTime: '5:00 PM' }
+      ],
+      'ashland': isSunday ? [
+        { value: 'sunday', label: 'Sunday (11:30 AM - 6:00 PM)', endTime: '6:00 PM' }
+      ] : [
+        { value: 'double', label: 'Double (9:30 AM - 8:00 PM)', endTime: '8:00 PM' },
+        { value: 'opening', label: 'Opening (9:30 AM - 3:00 PM)', endTime: '3:00 PM' },
+        { value: 'close', label: 'Close (3:00 PM - 8:00 PM)', endTime: '8:00 PM' }
+      ]
+    };
+    
+    return shifts[roomId] || [];
+  };
+  
+  // Handle adding a ghost player
+  const handleAddGhostPlayer = async (e) => {
+    e.preventDefault();
+    
+    if (!ghostPlayerName || !ghostPlayerShift) {
+      setGhostPlayerMessage('Please enter player name and select a shift');
+      setGhostPlayerMessageType('error');
+      return;
+    }
+    
+    try {
+      // Find the shift details
+      const shifts = getShiftsForRoom();
+      const shift = shifts.find(s => s.value === ghostPlayerShift);
+      
+      if (!shift) {
+        setGhostPlayerMessage('Invalid shift selected');
+        setGhostPlayerMessageType('error');
+        return;
+      }
+      
+      // Add to manuallyAddedPlayers collection
+      const manualPlayersRef = doc(db, 'manuallyAddedPlayers', 'players');
+      const manualPlayersDoc = await getDoc(manualPlayersRef);
+      
+      const playerData = {
+        name: ghostPlayerName,
+        room: roomId,
+        shiftEnd: shift.endTime,
+        shiftType: shift.value,
+        addedBy: moderator?.displayName || moderator?.username || playerName,
+        addedAt: new Date().toISOString(),
+        isGhostPlayer: true
+      };
+      
+      if (manualPlayersDoc.exists()) {
+        await updateDoc(manualPlayersRef, {
+          [ghostPlayerName.toLowerCase()]: playerData
+        });
+      } else {
+        await setDoc(manualPlayersRef, {
+          [ghostPlayerName.toLowerCase()]: playerData
+        });
+      }
+      
+      // Add to room queue immediately
+      const roomRef = doc(db, 'rooms', roomId);
+      await updateDoc(roomRef, {
+        queue: arrayUnion(ghostPlayerName)
+      });
+      
+      // Add history entry
+      const historyEntry = {
+        action: 'joinedQueue',
+        player: ghostPlayerName,
+        timestamp: new Date().toISOString(),
+        displayTime: new Date().toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        }),
+        details: {
+          actionBy: moderator?.displayName || moderator?.username || playerName,
+          isGhostPlayer: true
+        }
+      };
+      
+      await updateDoc(roomRef, {
+        history: arrayUnion(historyEntry)
+      });
+      
+      setGhostPlayerMessage(`${ghostPlayerName} has been added to the queue`);
+      setGhostPlayerMessageType('success');
+      
+      // Clear form after short delay
+      setTimeout(() => {
+        setGhostPlayerName('');
+        setGhostPlayerShift('');
+        setShowGhostPlayerModal(false);
+        setGhostPlayerMessage('');
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Error adding ghost player:', error);
+      setGhostPlayerMessage('Failed to add ghost player');
+      setGhostPlayerMessageType('error');
+    }
+  };
   
   // Function to save history to historical records collection
   const saveHistoryToArchive = async () => {
@@ -1001,6 +1130,154 @@ export default function RoomPage({ roomId, roomName }) {
     }
   `;
   
+  // Style for ghost player button
+  const ghostPlayerButton = css`
+    background-color: #9c27b0;
+    color: white;
+    border: none;
+    border-radius: 1rem;
+    padding: 0.5rem 1rem;
+    font-family: Poppins, sans-serif;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;  
+    cursor: pointer;
+    margin-right: 0.5rem;
+    transition: background-color 0.2s;
+    
+    &:hover {
+      background-color: #7b1fa2;
+    }
+  `;
+  
+  // Modal styling
+  const modalOverlay = css`
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  `;
+  
+  const modalContent = css`
+    background-color: white;
+    border-radius: 1rem;
+    padding: 2rem;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  `;
+  
+  const modalTitle = css`
+    font-family: 'Lilita One', cursive;
+    color: ${theme.primary};
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+  `;
+  
+  const form = css`
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  `;
+  
+  const label = css`
+    display: block;
+    font-family: Poppins, sans-serif;
+    font-size: 0.875rem;
+    color: #4b3b2b;
+    margin-bottom: 0.5rem;
+  `;
+  
+  const input = css`
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid #eacdca;
+    font-family: Poppins, sans-serif;
+    font-size: 1rem;
+    outline: none;
+    
+    &:focus {
+      border-color: ${theme.primary};
+    }
+  `;
+  
+  const select = css`
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid #eacdca;
+    font-family: Poppins, sans-serif;
+    font-size: 1rem;
+    outline: none;
+    cursor: pointer;
+    
+    &:focus {
+      border-color: ${theme.primary};
+    }
+  `;
+  
+  const messageDisplay = css`
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    margin-top: 1rem;
+    font-family: Poppins, sans-serif;
+    text-align: center;
+    
+    &.success {
+      background-color: #e0f2e9;
+      color: #2e7d32;
+    }
+    
+    &.error {
+      background-color: #f9e0e0;
+      color: #c62828;
+    }
+  `;
+  
+  const modalButtons = css`
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+  `;
+  
+  const modalButton = css`
+    flex: 1;
+    padding: 0.75rem;
+    border: none;
+    border-radius: 0.75rem;
+    font-family: Poppins, sans-serif;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    
+    &.primary {
+      background-color: ${theme.button};
+      color: white;
+      
+      &:hover {
+        background-color: ${theme.buttonHover};
+      }
+    }
+    
+    &.secondary {
+      background-color: #e0e0e0;
+      color: #4b3b2b;
+      
+      &:hover {
+        background-color: #d0d0d0;
+      }
+    }
+  `;
+  
   if (loading) {
     return (
       <div className={container}>
@@ -1020,23 +1297,34 @@ export default function RoomPage({ roomId, roomName }) {
             {moderator && <ModeratorBadge />}
           </div>
           
-          {/* Admin Controls and Dashboard Buttons - NEW */}
-          {moderator?.isAdmin && (
+          {/* Admin/Mod Controls Buttons */}
+          {(moderator?.isAdmin || moderator?.isModerator) && (
             <>
               <button
-                className={adminButton}
-                onClick={() => setShowAdminPanel(true)}
+                className={ghostPlayerButton}
+                onClick={() => setShowGhostPlayerModal(true)}
               >
-                <span role="img" aria-label="Admin">👑</span> Admin Controls
+                <span role="img" aria-label="Ghost">👻</span> Add Ghost Player
               </button>
               
-              <button
-                className={adminButton}
-                style={{ backgroundColor: '#0a3463' }} // Dark blue for contrast
-                onClick={() => navigate('/admin-dashboard')}
-              >
-                <span role="img" aria-label="Dashboard">📊</span> Dashboard
-              </button>
+              {moderator?.isAdmin && (
+                <>
+                  <button
+                    className={adminButton}
+                    onClick={() => setShowAdminPanel(true)}
+                  >
+                    <span role="img" aria-label="Admin">👑</span> Admin Controls
+                  </button>
+                  
+                  <button
+                    className={adminButton}
+                    style={{ backgroundColor: '#0a3463' }} // Dark blue for contrast
+                    onClick={() => navigate('/admin-dashboard')}
+                  >
+                    <span role="img" aria-label="Dashboard">📊</span> Dashboard
+                  </button>
+                </>
+              )}
             </>
           )}
           
@@ -1194,7 +1482,68 @@ export default function RoomPage({ roomId, roomName }) {
         </button>
       </div>
       
-      {/* Admin Controls Panel - NEW */}
+      {/* Ghost Player Modal */}
+      {showGhostPlayerModal && (
+        <div className={modalOverlay} onClick={() => setShowGhostPlayerModal(false)}>
+          <div className={modalContent} onClick={(e) => e.stopPropagation()}>
+            <h2 className={modalTitle}>Add Ghost Player</h2>
+            
+            <form className={form} onSubmit={handleAddGhostPlayer}>
+              <div>
+                <label className={label}>Player Name</label>
+                <input
+                  type="text"
+                  className={input}
+                  value={ghostPlayerName}
+                  onChange={(e) => setGhostPlayerName(e.target.value)}
+                  placeholder="Enter player name"
+                  autoFocus
+                />
+              </div>
+              
+              <div>
+                <label className={label}>Shift</label>
+                <select
+                  className={select}
+                  value={ghostPlayerShift}
+                  onChange={(e) => setGhostPlayerShift(e.target.value)}
+                >
+                  <option value="">Select a shift</option>
+                  {getShiftsForRoom().map(shift => (
+                    <option key={shift.value} value={shift.value}>
+                      {shift.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              {ghostPlayerMessage && (
+                <div className={`${messageDisplay} ${ghostPlayerMessageType}`}>
+                  {ghostPlayerMessage}
+                </div>
+              )}
+              
+              <div className={modalButtons}>
+                <button
+                  type="submit"
+                  className={`${modalButton} primary`}
+                >
+                  Add to Queue
+                </button>
+                <button
+                  type="button"
+                  className={`${modalButton} secondary`}
+                  onClick={() => setShowGhostPlayerModal(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      
+      {/* Admin Controls Panel */}
       {moderator?.isAdmin && showAdminPanel && (
         <AdminControlsPanel
           roomId={roomId}
