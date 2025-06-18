@@ -1,8 +1,13 @@
 import { render, screen } from '@testing-library/react';
 import App from './App';
 
-test('renders learn react link', () => {
+// Prevent Firestore initialization during tests
+jest.mock('./firebase/initializeFirestore', () => ({
+  initializeRooms: jest.fn(),
+}));
+
+test("renders landing page welcome text", () => {
   render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+  const textElement = screen.getByText(/Welcome to Who's Up/i);
+  expect(textElement).toBeInTheDocument();
 });
